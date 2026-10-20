@@ -5,4 +5,3 @@ from recallcam_shared.contracts.jobs import JobContext
 
 def run(context: JobContext) -> None:
     raise NotImplementedError("perception stage is not implemented.")
-

@@ -1,5 +1,7 @@
+import asyncio
+
+import httpx
 import pytest
-from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from recallcam_backend.main import create_app
@@ -22,7 +24,11 @@ def test_sequential_profile_rejects_accidental_parallel_jobs():
 
 
 def test_api_is_live_without_claiming_query_implementation():
-    with TestClient(create_app(Settings(_env_file=None))) as client:
-        assert client.get("/health/live").json()["status"] == "ok"
-        result = client.post("/api/queries", json={"question": "When did someone enter?"})
-        assert result.status_code == 501
+    async def check():
+        transport = httpx.ASGITransport(app=create_app(Settings(_env_file=None)))
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            assert (await client.get("/health/live")).json()["status"] == "ok"
+            result = await client.post("/api/queries", json={"question": "When did someone enter?"})
+            assert result.status_code == 501
+
+    asyncio.run(check())

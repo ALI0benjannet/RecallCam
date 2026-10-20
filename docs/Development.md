@@ -58,3 +58,5 @@ The README lists the exact Python test, lint, format, frontend typecheck/build, 
 Docker Compose can validate syntax without a running engine. Actual infrastructure verification additionally checks PostgreSQL/Redis health, Qdrant readiness, SILO readiness, and successful bucket initialization. Do not infer that the services run solely because `docker compose config` succeeds.
 
 The initial scaffold is verified locally on macOS ARM64; Windows/AMD64 should be verified by the team as development proceeds. No real video or licensed dataset needs to be uploaded to check this scaffold.
+
+Verification recorded on 2026-10-20: seven Python tests passed; Ruff and Black checks passed; frontend TypeScript checking and production build passed; the editable Python packages imported outside the repository; worker stage inspection printed the specified order; Compose configuration validated; PostgreSQL and Redis were healthy; Qdrant and SILO readiness returned HTTP 200; bucket initialization exited successfully; and a temporary S3 object completed a write/read/delete round trip. No real indexing or model-quality result is claimed by these checks.

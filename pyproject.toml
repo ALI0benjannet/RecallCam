@@ -35,6 +35,9 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["recallcam_backend", "recallcam_worker", "recallcam_shared"]
+
 [tool.black]
 target-version = ["py311"]
 line-length = 100
