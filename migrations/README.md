@@ -1,3 +1,17 @@
 # Database migrations
 
-PostgreSQL runs through Compose, but application tables and a migration framework are not implemented yet. Add versioned migrations with the durable video/job records and the shared schema. Do not treat an empty, healthy database as a completed application schema.
+Alembic is configured in root `alembic.ini`; its connection comes from shared settings. Compose runs `migrate` after PostgreSQL is healthy and before backend/worker startup. To apply new migrations explicitly, from the repository root:
+
+```sh
+docker compose run --rm migrate
+```
+
+Migration `0001_accounts_cameras_audit` creates `users`, `cameras` and `audit_events`, including UUID identities, foreign keys, constrained roles, case-normalized unique emails, timezone-aware timestamps, schema/producer versions and administration indexes. PostgreSQL user/camera storage is persistent; authentication tokens and refresh/session records are not stored.
+
+Create the first administrator separately using the interactive command in [Backend setup](../backend/README.md). Migrations never seed passwords or grant roles to an existing account. Backend startup does not automatically run migrations.
+
+The ORM metadata lives in `shared/src/recallcam_shared/database/models.py`. Generate later migrations with `docker compose exec backend python -m alembic revision --autogenerate -m "describe change"`, review the SQL operations and retain versioned migrations. Do not modify an applied migration to introduce new behavior. A downgrade of this initial migration deletes its three tables and their data; use it only when that data loss is intended.
+
+Camera lines/zones, videos/artifacts, jobs/checkpoints/outbox, pipeline records and online-query tables require later migrations. Their proposed design remains in [PostgreSQL application design](../docs/PostgreSQL_App_Design.md).
+
+The initial migration was applied natively to the local PostgreSQL database on 2026-10-20 as setup. Compose retains the existing database volume and upgrades fresh environments through its migration service. The containerized migration was not built/launched/tested at the user's request; the earlier native result does not verify this image or network path.

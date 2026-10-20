@@ -8,6 +8,8 @@ RecallCam is a video search and investigation platform with timestamped evidence
 2. [Architecture](docs/Architecture.md): backend/worker boundaries, Redis queue, storage, HTTP inference, and deployment configuration.
 3. [Sequential pipeline](docs/Sequential_Pipeline.md): indexing order, activity selection, redundancy handling, batching, and recovery.
 
+For application/authentication work also read [PostgreSQL application design](docs/PostgreSQL_App_Design.md) and [Authentication and administration](docs/Authentication_and_Admin.md). For frontend work read [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md) and [frontend agent instructions](front/AGENTS.md); reuse the shared Tailwind/shadcn UI and notification patterns.
+
 The architecture and pipeline supplement the cahier des charges; they do not override it. Revisit the relevant specification sections for each task. Surface conflicts rather than silently changing requirements or treating examples and recommendations as mandatory values. Record routine implementation decisions without unnecessarily blocking independent work.
 
 ## Architecture rules
@@ -52,8 +54,8 @@ Prepare video and timeline
 
 ## Development and verification
 
-- Inspect the current repository before changing it. The initial scaffold has `front/`, `backend/` (including `query/`), `worker/`, and `shared/`. Read [README](README.md) and [Development](docs/Development.md) for exact setup/check commands and implementation status. Stage TODOs, queue consumption, durable persistence, and RAG remain unimplemented; do not claim the scaffold processes videos.
-- Compose runs PostgreSQL, Redis, Qdrant, and SILO S3-compatible storage with persistent volumes. VLM/LLM services remain external HTTP endpoints. Keep application storage settings provider-neutral; the source specification is not rewritten to rename its recommended products.
+- Inspect the current repository before changing it. The project has `front/`, `backend/` (including `query/`), `worker/`, and `shared/`, with authentication/admin/camera code and Alembic migrations. Read [README](README.md) and [Development](docs/Development.md) for setup and implementation status. Stage TODOs, queue consumption, video/job persistence and RAG remain unimplemented; do not claim the application processes videos.
+- Compose runs frontend, backend, worker, a one-shot migration service, PostgreSQL, Redis, Qdrant and SILO with persistent volumes. Only VLM/LLM inference stays native/external through HTTP. Read [Containers](docs/Containers.md) before deployment/configuration work. Worker standby explicitly does not consume jobs; do not report it as processing readiness. Keep storage settings provider-neutral; the source specification is not rewritten to rename recommended products.
 - Keep changes focused and reviewable. Do not overwrite unrelated teammate work. Preserve the source specification; document implementation choices separately.
 - When scaffolding, document actual install, service-start, worker-start, lint, format, and test commands in a README and keep dependency/lock files consistent. Follow the specification's Python/tooling guidance.
 - Use fixtures and mocked HTTP responses for integration work without model hardware. Keep real inference checks separate; never report fixture or repeated-image cache results as independent model benchmarks.

@@ -1,113 +1,106 @@
 # RecallCam
 
-Video search and investigation with timestamped evidence. This repository starts with a development scaffold for a team implementing the cahier des charges.
+Video search and investigation with timestamped evidence. Docker Compose runs the frontend, backend, worker and infrastructure. Only LLM/VLM inference servers run natively or at another configured HTTP endpoint.
+
+The application currently implements login, fixed-role permissions, administrator-created accounts, camera metadata and administrative audit. Uploads, indexing and RAG remain future work. The worker container explicitly starts in standby until its queue consumer and durable job processing are implemented.
 
 ## Project structure
 
 ```text
-front/       Next.js and TypeScript application
-backend/     FastAPI application, routes, and query/RAG modules
-worker/      Separate process, sequential pipeline, and stage TODOs
-shared/      Shared Python settings, contracts, and adapter boundaries
+front/       Next.js, TypeScript, Tailwind/shadcn UI, frontend Dockerfile
+backend/     FastAPI application and query/RAG modules
+worker/      Separate worker process, sequential runner and stage TODOs
+shared/      Shared Python settings, contracts and database adapters
 configs/     Versioned processing policy and prompt location
-migrations/  Future versioned application database migrations
-tests/       Scaffold contract and orchestration checks
-docs/        Requirements and architecture
-compose.yaml PostgreSQL, Redis, Qdrant, SILO, and bucket initialization
+migrations/  Alembic application database migrations
+tests/       Existing scaffold checks
+docs/        Requirements, architecture and development guides
+Dockerfile   Shared Python image for backend, worker and migrations
+compose.yaml Full development stack; native LLM/VLM remain outside Docker
 ```
 
-Backend, worker, and shared modules are one installable Python project with separate import namespaces. Their folder separation does not require duplicating configuration or contracts. The frontend is a separate npm project.
+## Requirements and configuration
 
-## Requirements
+Install a Docker engine with Docker Compose. Host Node.js and Python environments are not required for the Compose workflow. Base images select the host's supported architecture; no Mac/Windows application branches are used.
 
-- Python 3.11 or newer; Python 3.12 is used to verify this scaffold.
-- Node.js 22 or newer and npm.
-- A running Docker engine with Docker Compose. Both ARM64 and AMD64 deployments are supported by the chosen infrastructure image families; the local verification platform is documented in the development guide.
+Copy `.env.example` to `.env` at the repository root. On macOS/Linux use `cp .env.example .env`; on PowerShell use `Copy-Item .env.example .env`. Do not overwrite an existing personal `.env`.
 
-## Configuration
-
-From the repository root, copy `.env.example` to `.env`. On macOS/Linux use `cp .env.example .env`; on PowerShell use `Copy-Item .env.example .env`.
-
-Separately copy `front/.env.example` to `front/.env.local` to configure the browser's API URL. Keep API/model credentials in the backend/worker environment, never in browser-visible `NEXT_PUBLIC_` variables.
-
-The checked-in credentials are local development examples. Service ports, database URLs, S3 endpoint/bucket/credentials, VLM/LLM URLs/model IDs/protocols, and processing devices are configurable. Changing infrastructure credentials or ports also requires updating the corresponding application URLs in `.env`.
-
-## Start infrastructure
+Set a private `JWT_SIGNING_KEY` of at least 32 random bytes. A fresh checkout can generate one without installing Python on the host:
 
 ```sh
-docker compose config --quiet
-docker compose up -d
-docker compose ps -a
+docker run --rm python:3.12-slim-bookworm python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
+
+Copy the result into the private `.env`; the example deliberately has no usable signing key. The existing local environment already has a generated key. Its service URLs were updated for container routing while credentials/model choices and remote endpoints were preserved.
+
+Internal URLs use Compose service names: `postgres`, `redis`, `qdrant`, `object-storage`. Native model URLs use `host.docker.internal` and the actual serving port, or another reachable host/provider address. Model IDs, API styles, credentials, timeouts and device choices remain configurable. See [Containers](docs/Containers.md) for networking and native model access.
+
+## Start the application
+
+Stop previously started native `npm run dev` and Uvicorn processes if they occupy ports 3000/8000. From the repository root:
+
+```sh
+docker compose up --build -d
+docker compose logs -f backend worker front
+```
+
+Compose waits for PostgreSQL, runs the `migrate` service, then starts the application. The private S3 bucket is created by `storage-init`. Both initialization containers normally finish successfully and exit.
 
 | Service | Default host address |
 | --- | --- |
+| Frontend | `http://localhost:3000/login` |
+| Backend / OpenAPI | `http://localhost:8000/docs` |
 | PostgreSQL | `127.0.0.1:5432` |
 | Redis | `127.0.0.1:6379` |
-| Qdrant HTTP / dashboard | `http://127.0.0.1:6333/dashboard` |
-| S3-compatible object storage | `http://127.0.0.1:9000` |
-| SILO console | `http://127.0.0.1:9001` |
+| Qdrant dashboard | `http://localhost:6333/dashboard` |
+| S3-compatible storage / SILO console | `http://localhost:9000` / `http://localhost:9001` |
 
-SILO is the community-maintained S3-compatible deployment chosen here. The one-shot `storage-init` service creates the private `recallcam` bucket and exits successfully. No anonymous bucket access is enabled. SILO retains `MINIO_*` server variables for compatibility; application settings use provider-neutral `S3_*` names. See the [SILO installation documentation](https://silo.pgsty.com/download/).
+The frontend proxies `/api/*` and `/health/live` to `backend:8000`. Browser requests stay on the frontend origin, so Docker-only names never become browser API addresses. Root `.env` configures Compose; `front/.env.local` is not copied or mounted into the frontend container. Only selected frontend settings enter that service.
 
-Named Docker volumes persist all infrastructure data. `docker compose stop` stops services while retaining containers/data; `docker compose down` removes containers/network while retaining named volumes. Adding `-v` to `down` deletes those volumes and their stored data.
+## Create the first administrator
 
-## Start the backend
-
-Create a virtual environment with a supported Python version:
+With the backend running:
 
 ```sh
-python3.11 -m venv .venv
+docker compose exec backend python -m recallcam_backend.cli create-admin --email you@example.com --display-name "Your name"
 ```
 
-Activate it with `source .venv/bin/activate` on macOS/Linux, or `.venv\Scripts\Activate.ps1` on PowerShell. A different installed Python 3.11+ executable is also suitable; Windows can use `py -3.11 -m venv .venv`.
+Use your chosen account email and enter a password at the hidden prompts. Bootstrap works only for an empty user table; there is no seeded/default password. Existing accounts and data remain in their persistent volumes. Later accounts are created through the administrator's Users page.
 
-With the environment active, from the repository root:
+See [Authentication and administration](docs/Authentication_and_Admin.md) for roles, password behavior and API surfaces.
+
+## Development and maintenance
+
+Application source and configuration directories are bind-mounted. Next.js and Uvicorn reload frontend/backend code. Host `.venv`, `node_modules`, `.next` and credentials are excluded from image contexts. Dependencies stay inside their images; changing a dependency declaration/lockfile requires rebuilding:
 
 ```sh
-python -m pip install -r requirements-dev.lock
-python -m pip install --no-deps -e .
-python -m uvicorn recallcam_backend.main:app --reload --host 127.0.0.1 --port 8000
+docker compose up --build -d
+docker compose restart worker
+docker compose exec worker python -m recallcam_worker --show-pipeline
 ```
 
-Open `http://127.0.0.1:8000/docs`. `/health/live` checks process liveness only. It does not check infrastructure readiness or application migrations. `/api/queries` returns HTTP 501 until query processing is implemented.
+For a newly added migration, apply it deliberately with `docker compose run --rm migrate`. Backend startup itself does not create tables. After changing `.env` values, recreate the affected services with `docker compose up -d`; a plain restart does not reload container environment variables.
 
-## Start the front
+Named volumes retain PostgreSQL, Redis, Qdrant, object storage, shared scratch data and future local model caches. `docker compose stop` stops services; `docker compose down` removes containers/network and retains data. Adding `-v` deletes named volumes and their stored data.
 
-In another terminal:
+Current images are development images with reload and bind mounts. A production deployment needs a separate immutable build configuration. Linux containers on a Mac do not expose the host's MPS accelerator; CV/embedding device selection must reflect the container environment. LLM/VLM inference remains native through HTTP.
 
-```sh
-cd front
-npm ci
-npm run dev
-```
+## Verification commands
 
-Open `http://localhost:3000`. The home page can check backend liveness. Upload, library, and chat pages are explicitly marked as unimplemented.
-
-## Inspect the worker
-
-With the Python environment active, from the repository root:
+For the person performing verification:
 
 ```sh
-python -m recallcam_worker --show-pipeline
-```
-
-The stage runner exists, but queue consumption, durable checkpoint persistence, actual CV/embeddings, model HTTP adapters, and indexing are not implemented. Running the worker without `--show-pipeline` exits with a clear error. Stage TODOs raise `NotImplementedError`; no real video is marked indexed.
-
-VLM and LLM servers are external HTTP services. Compose does not download or load those models. Host processes can use localhost or a reachable remote URL. If application processes are containerized later, use container-reachable addresses; localhost inside a container does not refer to the host's model server.
-
-## Checks
-
-```sh
-python -m pytest
-python -m ruff check backend worker shared tests
-python -m black --check backend worker shared tests
-npm --prefix front run typecheck
-npm --prefix front run build
+docker compose exec backend python -m pytest
+docker compose exec backend python -m ruff check backend worker shared tests
+docker compose exec backend python -m black --check backend worker shared tests
+docker compose exec front npm run typecheck
+docker compose run --rm --no-deps front npm run build
 docker compose config --quiet
 ```
 
-Python dependencies are resolved in `requirements-dev.lock`; frontend dependencies are resolved in `front/package-lock.json`. Update the dependency declarations and their corresponding lockfile together. No queue library, ORM/migration tool, or LangChain dependency is selected by this scaffold.
+Use a disposable frontend container for production-build checks to avoid conflicting with the running development server. Formatting commands are `docker compose exec front npm run format` and `docker compose exec backend python -m black backend worker shared tests`. Bind-mounted files edited from Linux containers must be writable by the container user; the team can format with its host editor instead.
+
+At the user's request, this containerization change was not built, started or tested. Earlier scaffold/authentication setup results do not validate these container images. No real indexing/model-quality result is claimed.
 
 ## Read before implementation
 
@@ -115,6 +108,10 @@ Python dependencies are resolved in `requirements-dev.lock`; frontend dependenci
 - [Cahier des charges](docs/RecallCam_Cahier_des_Charges.md)
 - [Architecture](docs/Architecture.md)
 - [Sequential pipeline](docs/Sequential_Pipeline.md)
+- [PostgreSQL application design](docs/PostgreSQL_App_Design.md)
+- [Authentication and administration](docs/Authentication_and_Admin.md)
+- [Container guide](docs/Containers.md)
+- [Product context](PRODUCT.md) and [UI system](DESIGN.md)
 - [Development guide](docs/Development.md)
 
-The architecture supplements the specification. This scaffold is not a reduced replacement for its required features, evaluation, or privacy/data handling requirements.
+The supplemental documents and container packaging do not reduce the specification's required features, evaluation or privacy/data-handling requirements.

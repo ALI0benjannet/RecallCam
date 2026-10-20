@@ -2,7 +2,7 @@
 
 ## Scope of the initial scaffold
 
-The repository now has separate `front/`, `backend/`, and `worker/` folders, plus `shared/` Python contracts/configuration. One root Python distribution installs backend, worker, and shared packages. Native API/worker processes can run on supported Windows, macOS, or Linux environments; inference addresses and device preferences are configuration.
+The repository has separate `front/`, `backend/` and `worker/` folders, plus `shared/` Python contracts/configuration. Compose packages all application/infrastructure services; only LLM/VLM serving stays native/external. One Python image installs backend, worker and shared packages. Addresses and device preferences are configuration across development platforms; see [Containers](Containers.md).
 
 Implemented foundations:
 
@@ -13,12 +13,17 @@ Implemented foundations:
 - Shared typed environment settings and an initial execution context.
 - Compose infrastructure with persistent PostgreSQL, Redis, Qdrant, and SILO volumes.
 - A repeatable private S3 bucket initialization service.
+- Full development Compose services, source mounts, one-shot migrations and a frontend API proxy. Worker container is explicitly standby, not a functioning consumer.
 
-Not yet implemented: video uploads/library APIs, camera management, application database migrations, authentication/audit, Redis publishing/consumption, durable job claims and recovery, processing stages, HTTP model adapters, retrieval/grounding, LangChain/tool loops, and evidence/citation checks. Placeholder pages and TODO handlers must not be represented as working product features.
+The next application slice adds login/JWT signing and validation, separate authentication/role middleware, fixed permissions, administrator-created users, account/password changes, camera metadata management, administrative audit, SQLAlchemy/psycopg persistence and an initial Alembic migration. These features connect frontend routes to backend APIs; they have not been tested at the user's request. See [Authentication and administration](Authentication_and_Admin.md) and [UI system](../DESIGN.md).
+
+Not yet implemented: video uploads/library APIs, line/zone camera configuration, video/job database migrations, Redis publishing/consumption, durable job claims and recovery, processing stages, HTTP model adapters, retrieval/grounding, LangChain/tool loops, query-purpose/returned-clip audit and evidence/citation checks. Placeholder pages and TODO handlers must not be represented as working product features.
 
 ## Sources of requirements and choices
 
 The [cahier des charges](RecallCam_Cahier_des_Charges.md) remains unchanged and authoritative. [Architecture](Architecture.md) and [Sequential pipeline](Sequential_Pipeline.md) record supplemental decisions. Deployment changes do not remove any evaluation or feature requirements.
+
+[PostgreSQL application design](PostgreSQL_App_Design.md) records the agreed stateless JWT, fixed-role permissions and explicit upload-then-Process workflow, with application tables and queue/status views. Its users/cameras/administrative-audit subset now has an implementation and migration; upload/queue functionality remains unimplemented.
 
 The source specification names MinIO among recommended tools. For this scaffold, choose [SILO](https://silo.pgsty.com/download/) as the S3-compatible object-storage deployment. [MinIO's community repository](https://github.com/minio/minio) is archived and no longer maintained; its existing source remains AGPL-licensed. This is a maintained deployment substitution behind an S3 interface, not an edit to the original requirements.
 
@@ -26,9 +31,9 @@ Image versions and credentials/ports are documented in the root `.env.example`. 
 
 ## Setup and daily commands
 
-Follow the [root README](../README.md) for platform-specific environment activation and startup commands. Start infrastructure with `docker compose up -d`; start API and front in separate terminals. The worker currently supports `python -m recallcam_worker --show-pipeline` rather than actual queue consumption.
+Follow the [root README](../README.md): `docker compose up --build -d` starts application and infrastructure. Stop native frontend/backend servers if they hold the published ports. Inspect the worker with `docker compose exec worker python -m recallcam_worker --show-pipeline`; Compose uses its explicit standby mode until queue consumption is implemented.
 
-Run commands from the repository root unless a command explicitly changes directory. Python settings read the root `.env`; Next.js reads `front/.env.local`. Keep secrets out of committed files and frontend public environment variables. The ignored `data/` directory is for future local scratch files; persisted object data lives in Docker volumes.
+Run Compose commands from the repository root. Root `.env` supplies selected environment settings; frontend does not receive backend/model secrets and does not mount `front/.env.local`. Browser calls use the frontend origin and its server-side backend proxy. Backend/worker share `/app/data` scratch storage and a cache volume; object data remains in its separate persistent storage volume. Host `.venv`, `node_modules` and `.next` are excluded from image contexts.
 
 Default exposed infrastructure ports bind to `127.0.0.1`. Remote teammates can run their own stack or configure a deliberately reachable shared deployment. There is no assumption that every teammate uses one developer's machine. Model services remain outside the API/worker and are reached over HTTP.
 
@@ -42,7 +47,7 @@ Processing settings are versioned in `configs/pipeline.yaml`. These values are a
 
 ## Dependency maintenance
 
-`pyproject.toml` declares the Python project and developer tools. Rebuild the development lockfile using a supported Python environment with pip-tools installed:
+`pyproject.toml` declares the Python project and tools. Rebuild the lockfile in a disposable Python service instance with the repository mounted, or a supported local development environment with pip-tools:
 
 ```sh
 python -m pip install "pip-tools>=7.5,<8"
@@ -50,6 +55,8 @@ python -m piptools compile --extra dev --output-file requirements-dev.lock pypro
 ```
 
 Install with the lockfile, then install the repository editable with `--no-deps`. Front uses npm with `package-lock.json`; use `npm ci` for repeatable installs. Keep declarations and locks in the same change. Do not commit `.venv`, `node_modules`, generated media, local credentials, downloaded weights, or infrastructure data.
+
+Dockerfiles perform locked installs and editable Python installation. Rebuild images after dependency/lockfile changes with `docker compose up --build -d`. Dependency declarations are not mounted over stale image-installed packages. Source/config mounts handle ordinary code changes; restart worker after changing imported code.
 
 ## Verification
 
@@ -59,4 +66,10 @@ Docker Compose can validate syntax without a running engine. Actual infrastructu
 
 The initial scaffold is verified locally on macOS ARM64; Windows/AMD64 should be verified by the team as development proceeds. No real video or licensed dataset needs to be uploaded to check this scaffold.
 
-Verification recorded on 2026-10-20: seven Python tests passed; Ruff and Black checks passed; frontend TypeScript checking and production build passed; the editable Python packages imported outside the repository; worker stage inspection printed the specified order; Compose configuration validated; PostgreSQL and Redis were healthy; Qdrant and SILO readiness returned HTTP 200; bucket initialization exited successfully; and a temporary S3 object completed a write/read/delete round trip. No real indexing or model-quality result is claimed by these checks.
+Initial-scaffold verification recorded on 2026-10-20, before authentication/admin changes: seven Python tests passed; Ruff and Black checks passed; frontend TypeScript checking and production build passed; the editable Python packages imported outside the repository; worker stage inspection printed the specified order; Compose configuration validated; PostgreSQL and Redis were healthy; Qdrant and SILO readiness returned HTTP 200; bucket initialization exited successfully; and a temporary S3 object completed a write/read/delete round trip. Those results apply only to that earlier scaffold. No real indexing or model-quality result is claimed by these checks.
+
+The subsequent authentication/admin change deliberately did not run automated tests, lint/type checks, a frontend build, HTTP requests or browser checks because the user requested to test personally. Dependencies were installed and the first users/cameras/audit migration was applied to the local PostgreSQL database as setup; no account was seeded. Setup exposed and corrected dotenv parsing for the fixed `INDEXING_CONCURRENCY=1` policy. Existing scaffold tests may need authentication-aware updates; no new passing-test claim is made.
+
+The later full-container development packaging was not built, launched, config-validated or tested, also at the user's request. Earlier host results do not validate these Docker images. The source specification remains unchanged.
+
+The later UI redesign follows the web-semantique visual reference, updates the shared shell and all existing screens, and adds a real active-camera preview to the overview using the existing camera API. The [UI system](../DESIGN.md) and [frontend instructions](../front/AGENTS.md) document it. Source editing and formatting were performed; no tests, build, typecheck, HTTP requests or browser checks were run. Earlier scaffold verification does not validate the redesigned interface.

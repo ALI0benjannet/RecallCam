@@ -36,6 +36,8 @@ VLM service and LLM service
 
 The backend and worker are separate processes. The initial repository uses `front/` for Next.js, `backend/` for FastAPI and its `query/` package, `worker/` for sequential indexing, and `shared/` for Python contracts/settings and adapter boundaries. One root Python package configuration installs the three Python namespaces together. This separation does not require a separate repository or network service for every processing stage. See [Development](Development.md) for what is implemented versus scaffolded.
 
+The development deployment now packages frontend, backend, worker and infrastructure in Compose, plus a one-shot migration service. Only VLM/LLM inference remains native/external through HTTP. The frontend proxies browser API requests to the backend service. Worker is explicitly standby until its queue consumer exists; container startup does not implement processing. See [Containers](Containers.md) for Dockerfiles, service names, source mounts and commands.
+
 VLM and LLM are logical service roles. They may be exposed by the same model server using distinct model identifiers, or by different services. Their deployment does not change who owns application logic or indexing orchestration.
 
 ## 2. FastAPI backend responsibilities
@@ -49,13 +51,16 @@ The backend owns the normal application request/response flow and application lo
 - The user-query workflow, including planning, retrieval, SQL counts, grounding, citations, answers, feedback, and other specified behavior.
 - HTTP calls to the configured LLM and, where required, VLM services for the online query path.
 
-Long video indexing runs in the worker, rather than occupying the request that registered the upload. Upload completion may take time; the asynchronous indexing response is returned after storage and job registration have been handled successfully.
+Long video indexing runs in the worker, rather than occupying the upload request. Upload and Process are separate actions: uploading stores and registers a video without automatically creating an indexing job. Only an explicit administrator Process action creates and queues indexing work.
 
 An illustrative flow is:
 
 ```text
 Upload/register video
     → persist video metadata and storage reference
+    → return the library entry, without an indexing job
+
+Administrator selects Process
     → create durable indexing job
     → publish job reference to Redis-backed queue
     → return 202 Accepted with video_id and job_id
@@ -65,6 +70,8 @@ Read job status
 ```
 
 Endpoint paths and response fields are implementation details to finalize through the project's shared schemas. This example does not introduce a replacement for Section 8's data contract.
+
+Authentication uses stateless expiring JWT access tokens, with no server-side authentication sessions or refresh-token records. Administrators create users and assign fixed roles. Administrator has all features; supervisor inherits operator features plus evidence export, audit and the specified Stage 2 standing queries. Operator can browse accessible footage, ask questions, view answers/evidence and submit feedback. Enforce permissions in the backend. The authentication/admin slice adds login, current-account validation, separate authentication/role middleware, administrator user and camera management, and administrative audit; see [Authentication and administration](Authentication_and_Admin.md). [PostgreSQL application design](PostgreSQL_App_Design.md) retains the broader proposed records and upload/queue UI state; upload and indexing work remain unimplemented.
 
 ## 3. Background worker responsibilities
 
@@ -152,15 +159,16 @@ An illustrative configuration is:
 
 ```dotenv
 # Deployment configuration; values are examples, not mandatory defaults.
-DATABASE_URL=postgresql://recallcam:replace-me@127.0.0.1:5432/recallcam
-REDIS_URL=redis://127.0.0.1:6379/0
-QDRANT_URL=http://127.0.0.1:6333
-STORAGE_BACKEND=filesystem
-DATA_DIR=./data
+DATABASE_URL=postgresql://recallcam:replace-me@postgres:5432/recallcam
+REDIS_URL=redis://redis:6379/0
+QDRANT_URL=http://qdrant:6333
+STORAGE_BACKEND=s3
+S3_ENDPOINT_URL=http://object-storage:9000
+DATA_DIR=/app/data
 
 # Separate HTTP model services.
 VLM_API_STYLE=lmstudio-native
-VLM_BASE_URL=http://127.0.0.1:1234
+VLM_BASE_URL=http://host.docker.internal:1234
 VLM_MODEL_ID=qwen3-vl-4b-instruct-mlx
 VLM_API_KEY=
 VLM_TIMEOUT_SECONDS=180
@@ -201,6 +209,6 @@ Backend and worker share versioned Pydantic/JSON Schema contracts for identifier
 
 Use recorded fixtures and mock HTTP model responses for application integration tests that do not require model hardware. Keep real inference checks and performance measurements identifiable so fixture results are never reported as model-quality or speed results.
 
-Infrastructure services can use a shared deployment configuration such as Docker Compose, while model services and accelerated worker components run through whichever supported deployment suits the environment. Do not require all team members to use the same accelerator or assume a Linux container exposes every host's GPU identically.
+Compose packages all application and infrastructure services, while LLM/VLM services remain native or at another configured HTTP endpoint. CV/embedding work belongs to the containerized application as implemented. Do not assume Linux containers expose every host's GPU: MPS is unavailable inside a Linux container on macOS, and CUDA requires an explicitly supported GPU/runtime configuration.
 
 The initial scaffold realizes these folder/service boundaries without implementing the full product. It does not add a team allocation, hardware target, model-selection mandate, or reduced version of the cahier des charges. The intended result remains one application architecture with configurable deployments and a sequential background indexing implementation.

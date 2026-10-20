@@ -11,6 +11,8 @@ This design is independent of the development operating system and hardware. The
 ```text
 Backend accepts and stores a recorded video
     ↓
+Video stays in the library without indexing until administrator selects Process
+    ↓
 Backend creates a durable job and queues its reference in Redis
     ↓
 Worker claims the video job

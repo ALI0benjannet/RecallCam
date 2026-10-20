@@ -1,7 +1,148 @@
 name: ${COMPOSE_PROJECT_NAME:-recallcam}
 
-# Infrastructure only. API, front, worker, and model servers run separately.
+# Full development stack. Only LLM/VLM inference servers run natively/outside Docker.
+x-python-service: &python-service
+  image: ${APP_IMAGE:-recallcam-app:dev}
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim-bookworm}
+  init: true
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  environment:
+    DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+    QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+    STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+    S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://object-storage:9000}
+    S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?Set S3_ACCESS_KEY_ID in .env}
+    S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env}
+    S3_BUCKET: ${S3_BUCKET:-recallcam}
+    S3_REGION: ${S3_REGION:-us-east-1}
+    DATA_DIR: /app/data
+    CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}'
+    JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?Set a private JWT_SIGNING_KEY in .env}
+    JWT_ISSUER: ${JWT_ISSUER:-recallcam}
+    JWT_AUDIENCE: ${JWT_AUDIENCE:-recallcam-api}
+    JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+    VLM_API_STYLE: ${VLM_API_STYLE:-lmstudio-native}
+    VLM_BASE_URL: ${VLM_BASE_URL:-http://host.docker.internal:1234}
+    VLM_MODEL_ID: ${VLM_MODEL_ID:-qwen3-vl-4b-instruct-mlx}
+    VLM_API_KEY: ${VLM_API_KEY:-}
+    VLM_TIMEOUT_SECONDS: ${VLM_TIMEOUT_SECONDS:-180}
+    LLM_API_STYLE: ${LLM_API_STYLE:-openai-compatible}
+    LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:1234/v1}
+    LLM_MODEL_ID: ${LLM_MODEL_ID:-}
+    LLM_API_KEY: ${LLM_API_KEY:-}
+    LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
+    CV_DEVICE: ${CV_DEVICE:-auto}
+    EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-auto}
+    INDEXING_CONCURRENCY: ${INDEXING_CONCURRENCY:-1}
+    HF_HOME: /home/app/.cache/huggingface
+  volumes:
+    - ./backend/src:/app/backend/src
+    - ./shared/src:/app/shared/src
+    - ./worker/src:/app/worker/src
+    - ./configs:/app/configs
+    - ./migrations:/app/migrations
+    - ./tests:/app/tests
+    - ./alembic.ini:/app/alembic.ini:ro
+    - app_data:/app/data
+    - model_cache:/home/app/.cache
+
 services:
+  migrate:
+    <<: *python-service
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    <<: *python-service
+    command:
+      - python
+      - -m
+      - uvicorn
+      - recallcam_backend.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/backend/src
+      - --reload-dir
+      - /app/shared/src
+    ports:
+      - "${COMPOSE_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=4).close()"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
+    restart: unless-stopped
+
+  worker:
+    <<: *python-service
+    # Replace standby with the real consumer once durable queue processing is implemented.
+    command: ["python", "-m", "recallcam_worker", "--standby"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      storage-init:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_started
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+  front:
+    image: ${FRONT_IMAGE:-recallcam-front:dev}
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm-slim}
+    init: true
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      # These are frontend-only values; Python/model credentials never enter this service.
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
+      WATCHPACK_POLLING: ${FRONT_WATCH_POLLING:-false}
+    ports:
+      - "${COMPOSE_BIND_ADDRESS:-127.0.0.1}:${FRONT_PORT:-3000}:3000"
+    volumes:
+      - ./front/src:/app/src
+      - ./front/public:/app/public
+      - ./front/next.config.mjs:/app/next.config.mjs:ro
+      - ./front/tsconfig.json:/app/tsconfig.json
+      - ./front/postcss.config.mjs:/app/postcss.config.mjs:ro
+      - ./front/components.json:/app/components.json:ro
+      - ./front/.prettierrc.json:/app/.prettierrc.json:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:18.6-alpine}
     environment:
@@ -79,6 +220,8 @@ services:
     restart: "no"
 
 volumes:
+  app_data:
+  model_cache:
   postgres_data:
   redis_data:
   qdrant_data:
