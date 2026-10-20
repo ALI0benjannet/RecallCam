@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { ServiceStatus } from "@/components/service-status";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,8 +102,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         : null;
   const forbidden = required && !user.permissions.includes(required);
   const current =
-    links.find((link) => link.href === pathname)?.label ??
-    (pathname === "/account" ? "Your account" : "Workspace");
+    links.find(
+      (link) =>
+        link.href === pathname || (link.href !== "/" && pathname.startsWith(`${link.href}/`)),
+    )?.label ?? (pathname === "/account" ? "Your account" : "Workspace");
   const sidebar = (
     <>
       <Link href="/" aria-label="RecallCam overview" className="mb-9 block px-3">
@@ -126,8 +129,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    aria-current={pathname === link.href ? "page" : undefined}
-                    className={cn("sidebar-link", pathname === link.href && "sidebar-link-active")}
+                    aria-current={
+                      pathname === link.href ||
+                      (link.href !== "/" && pathname.startsWith(`${link.href}/`))
+                        ? "page"
+                        : undefined
+                    }
+                    className={cn(
+                      "sidebar-link",
+                      (pathname === link.href ||
+                        (link.href !== "/" && pathname.startsWith(`${link.href}/`))) &&
+                        "sidebar-link-active",
+                    )}
                   >
                     <link.icon className="size-[18px]" strokeWidth={1.7} aria-hidden="true" />
                     {link.label}
@@ -187,7 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </DialogContent>
       </Dialog>
       <div className="flex min-h-screen min-w-0 flex-col lg:ml-[252px]">
-        <header className="flex h-[82px] shrink-0 items-center justify-between gap-4 border-b bg-card/80 px-5 sm:px-8 xl:px-10">
+        <header className="flex min-h-[82px] shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b bg-card/80 px-5 py-4 sm:h-[82px] sm:px-8 sm:py-0 xl:px-10">
           <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="ghost"
@@ -208,11 +221,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="truncate font-medium">{current}</span>
             </nav>
           </div>
+          <div className="order-last w-full border-t pt-3 sm:order-none sm:ml-auto sm:w-auto sm:border-0 sm:pt-0">
+            <ServiceStatus />
+          </div>
           <Link
             href="/account"
             className="group flex shrink-0 items-center gap-3 rounded-lg p-1.5 transition-colors hover:bg-muted"
           >
-            <div className="hidden text-right sm:block">
+            <div className="hidden text-right xl:block">
               <p className="max-w-44 truncate text-xs font-semibold">{user.display_name}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">{roleLabels[user.role]}</p>
             </div>

@@ -6,6 +6,8 @@ The pipeline runs sequentially by stage for one video. A stage may process frame
 
 This design is independent of the development operating system and hardware. The [architecture document](Architecture.md) describes the API, worker, Redis queue, storage, and model services.
 
+[Playback preparation](Playback_Preparation.md) is a separate, explicitly requested media job for browser compatibility. It does not start or change this indexing pipeline. Indexing uses the original through a validated decoder; browser inability to play MPEG does not by itself prevent FFmpeg frame extraction. No decoder supports every possible or damaged file, so M1 must validate decoding and timing before CV receives frames. The 5 FPS CV sampling policy must not be applied to the browser playback copy.
+
 ## 1. Overall order
 
 ```text
@@ -76,14 +78,14 @@ Object presence alone is insufficient. A permanently parked vehicle should not t
 
 Use tracking and temporal context together with inexpensive scene or foreground changes. Useful signals include a new track, line crossing, zone entry or exit, object handling, a changed carried object, or an object appearing, disappearing, or moving. A stopped object or stationary person can still matter for dwell-time questions even when repeated captions are unnecessary.
 
-| Observation | Caption selection behavior |
-| --- | --- |
-| Empty corridor with no meaningful change | Compress the static representation; avoid repeated VLM calls. |
-| Same parked vehicle in the same state | Retain its presence and time coverage; avoid repeated equivalent captions. |
-| Person appears or crosses a configured line | Keep frames that explain the appearance or crossing. |
-| Person stands still for a long period | Preserve track duration and dwell facts; avoid repeated equivalent visual descriptions. |
-| Person handles or leaves a bag | Keep frames around the interaction and its outcome. |
-| Object remains after a person leaves | Preserve the change and the remaining object even without a person in the later frame. |
+| Observation                                    | Caption selection behavior                                                                     |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Empty corridor with no meaningful change       | Compress the static representation; avoid repeated VLM calls.                                  |
+| Same parked vehicle in the same state          | Retain its presence and time coverage; avoid repeated equivalent captions.                     |
+| Person appears or crosses a configured line    | Keep frames that explain the appearance or crossing.                                           |
+| Person stands still for a long period          | Preserve track duration and dwell facts; avoid repeated equivalent visual descriptions.        |
+| Person handles or leaves a bag                 | Keep frames around the interaction and its outcome.                                            |
+| Object remains after a person leaves           | Preserve the change and the remaining object even without a person in the later frame.         |
 | Meaningful scene change or uncertain detection | Keep candidates for review/captioning rather than relying only on a positive object detection. |
 
 Do not make successful detection of a specific object class the only gate. Include scene-change or periodic fallback checks so detector misses and activity outside the chosen classes can be evaluated. Thresholds and fallback intervals are implementation parameters to validate, not numbers prescribed by the specification.
@@ -170,14 +172,13 @@ The backend remains available for application requests while the worker processe
 
 ## 10. Choices and requirements remain distinguishable
 
-| Topic | Source requirement or documented choice |
-| --- | --- |
-| CV sampling | Choice: start at 5 FPS, within M2's 5–10 FPS range. |
-| Activity-only captioning and static compression | Required strategy in M1 and Section 9.2. |
-| Chunk captions, embeddings, BM25, and summaries | M3 requirements; retained by this stage schedule. |
-| Stage order and stage-wide model reuse | Implementation choices recorded here. |
-| VLM and LLM inference over HTTP | Implementation choice recorded in the architecture. |
-| Model selection, evaluation, and advanced work | Continue to follow the specification; current Qwen choice is documented and benchmarked. |
-| Resolution, selection thresholds, and VLM frames per chunk | Not fixed here; configure and evaluate them. |
-| Indexing performance | Preserve the specification's targets and reference-machine context; no Mac- or Windows-specific timing promise. |
-
+| Topic                                                      | Source requirement or documented choice                                                                         |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| CV sampling                                                | Choice: start at 5 FPS, within M2's 5–10 FPS range.                                                             |
+| Activity-only captioning and static compression            | Required strategy in M1 and Section 9.2.                                                                        |
+| Chunk captions, embeddings, BM25, and summaries            | M3 requirements; retained by this stage schedule.                                                               |
+| Stage order and stage-wide model reuse                     | Implementation choices recorded here.                                                                           |
+| VLM and LLM inference over HTTP                            | Implementation choice recorded in the architecture.                                                             |
+| Model selection, evaluation, and advanced work             | Continue to follow the specification; current Qwen choice is documented and benchmarked.                        |
+| Resolution, selection thresholds, and VLM frames per chunk | Not fixed here; configure and evaluate them.                                                                    |
+| Indexing performance                                       | Preserve the specification's targets and reference-machine context; no Mac- or Windows-specific timing promise. |

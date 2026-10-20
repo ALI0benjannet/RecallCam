@@ -50,17 +50,17 @@ Expiration or a protected-request `401` clears the browser token and returns to 
 
 ## API surfaces
 
-| API | Purpose / access |
-| --- | --- |
-| `POST /api/auth/login` | Public sign-in. |
-| `GET /api/auth/me` | Current authenticated account, role and computed permissions. |
-| `POST /api/auth/change-password` | Authenticated account changes its password. |
-| `GET`, `POST /api/users` | Administrator lists/creates accounts. |
-| `PATCH /api/users/{user_id}` | Administrator updates display name, role or active state. |
-| `POST /api/users/{user_id}/password` | Administrator resets a user's password. |
-| `GET /api/cameras`, `GET /api/cameras/{camera_id}` | Authenticated footage-reading roles inspect camera metadata. |
-| `POST /api/cameras`, `PATCH /api/cameras/{camera_id}` | Administrator registers/updates/archives/restores a camera. |
-| `GET /api/audit-events` | Supervisor/administrator reads paginated administrative audit. |
+| API                                                   | Purpose / access                                               |
+| ----------------------------------------------------- | -------------------------------------------------------------- |
+| `POST /api/auth/login`                                | Public sign-in.                                                |
+| `GET /api/auth/me`                                    | Current authenticated account, role and computed permissions.  |
+| `POST /api/auth/change-password`                      | Authenticated account changes its password.                    |
+| `GET`, `POST /api/users`                              | Administrator lists/creates accounts.                          |
+| `PATCH /api/users/{user_id}`                          | Administrator updates display name, role or active state.      |
+| `POST /api/users/{user_id}/password`                  | Administrator resets a user's password.                        |
+| `GET /api/cameras`, `GET /api/cameras/{camera_id}`    | Authenticated footage-reading roles inspect camera metadata.   |
+| `POST /api/cameras`, `PATCH /api/cameras/{camera_id}` | Administrator registers/updates/archives/restores a camera.    |
+| `GET /api/audit-events`                               | Supervisor/administrator reads paginated administrative audit. |
 
 List responses use `items`, `total`, `page`, `page_size`. User and camera identifiers are UUIDs. Passwords are accepted only by dedicated input contracts, hashed with Argon2 and never returned. PostgreSQL stores constrained roles, camera metadata and bounded audit details. No video bytes or passwords/tokens belong in audit payloads.
 
@@ -69,3 +69,7 @@ The browser API client and shared Pydantic contracts define the exact request/re
 ## Verification status
 
 At the user's explicit request, this change was not exercised with automated tests, lint/type checks, a frontend build, HTTP login requests or browser checks. Existing scaffold test results recorded earlier apply to that earlier scaffold only. The user will perform functional verification. Dependency installation and schema setup are setup operations and must not be presented as an end-to-end authentication test.
+
+## Recording library extension
+
+[Recording library](Recording_Library.md) now implements the videos:manage / footage:read recording routes without jobs or model calls. Audit results include actor/resource names resolved by the backend for supervisors and administrators; this does not grant supervisors user-management API access. All active authenticated roles may request service presence, with standby explicitly distinguished from processing readiness.

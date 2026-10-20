@@ -20,6 +20,12 @@ argon2-cffi-bindings==26.1.0
     # via argon2-cffi
 black==26.10.1
     # via recallcam (pyproject.toml)
+boto3==1.43.116
+    # via recallcam (pyproject.toml)
+botocore==1.43.116
+    # via
+    #   boto3
+    #   s3transfer
 certifi==2026.10.19
     # via
     #   httpcore
@@ -29,7 +35,10 @@ cffi==2.1.1
 click==8.5.0
     # via
     #   black
+    #   rq
     #   uvicorn
+croniter==6.2.4
+    # via rq
 dnspython==2.9.0
     # via email-validator
 email-validator==2.3.0
@@ -51,6 +60,10 @@ idna==3.20
     #   httpx
 iniconfig==2.3.1
     # via pytest
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
 mako==1.4.3
     # via alembic
 markupsafe==3.0.4
@@ -89,12 +102,26 @@ pyjwt==2.15.1
     # via recallcam (pyproject.toml)
 pytest==9.1.1
     # via recallcam (pyproject.toml)
+python-dateutil==2.9.0.post0
+    # via
+    #   botocore
+    #   croniter
 python-dotenv==1.2.4
     # via pydantic-settings
 pytokens==0.4.1
     # via black
+redis==7.4.1
+    # via
+    #   recallcam (pyproject.toml)
+    #   rq
+rq==2.12.0
+    # via recallcam (pyproject.toml)
 ruff==0.17.1
     # via recallcam (pyproject.toml)
+s3transfer==0.19.3
+    # via boto3
+six==1.17.0
+    # via python-dateutil
 sqlalchemy==2.0.55
     # via
     #   alembic
@@ -121,5 +148,7 @@ typing-inspection==0.4.4
     #   pydantic-settings
 tzdata==2026.5
     # via recallcam (pyproject.toml)
+urllib3==2.8.0
+    # via botocore
 uvicorn==0.54.0
     # via recallcam (pyproject.toml)

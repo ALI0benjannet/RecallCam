@@ -1,0 +1,13 @@
+/* Use the skin's public customization API; keep package internals untouched. */
+.recallcam-player {
+  --media-accent-color: var(--selection);
+  --media-accent-text-color: var(--sidebar);
+  --media-font-family: "Manrope Variable", "Segoe UI", sans-serif;
+  --media-border-radius: 0px;
+  --media-border-color: transparent;
+  --media-object-fit: contain;
+  --media-object-position: center;
+  --media-scale-unit: 1rem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}

@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   title: { default: "RecallCam", template: "%s · RecallCam" },
   description: "Video search and investigation with timestamped evidence",
   icons: {
-    icon: "/brand/recallcam-icon-v2.png",
-    apple: "/brand/recallcam-icon-v2.png",
+    icon: "/brand/recallcam-icon-v3.png",
+    apple: "/brand/recallcam-icon-v3.png",
   },
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

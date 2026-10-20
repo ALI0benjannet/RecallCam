@@ -11,7 +11,6 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { BackendStatus } from "@/components/backend-status";
 import { EvidenceGraphic } from "@/components/evidence-graphic";
 import {
   EmptyState,
@@ -225,7 +224,6 @@ export default function HomePage() {
               ))}
             </div>
           </section>
-          <BackendStatus />
         </aside>
       </div>
       <section className="mt-7 flex flex-col gap-5 rounded-xl border px-6 py-5 sm:flex-row sm:items-start">
@@ -242,8 +240,8 @@ export default function HomePage() {
         </Link>
       </section>
       <p className="mt-5 text-[11px] leading-6 text-muted-foreground">
-        Recording uploads, processing and evidence search are being connected. Camera and account
-        management are available now.
+        Recording uploads and the library are available. Processing and evidence search are not
+        connected yet.
       </p>
     </>
   );

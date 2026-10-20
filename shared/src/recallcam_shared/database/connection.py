@@ -1,6 +1,6 @@
 """PostgreSQL connections shared by API and future workers; never create tables implicitly."""
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Connection, Engine, create_engine
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -25,5 +25,5 @@ def create_database_engine(settings: Settings) -> Engine:
     )
 
 
-def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+def create_session_factory(engine: Engine | Connection) -> sessionmaker[Session]:
     return sessionmaker(engine, expire_on_commit=False)

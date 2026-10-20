@@ -1,4 +1,16 @@
-import type { Camera, Page, User, LoginResponse, AuditEvent } from "./types";
+import type {
+  Camera,
+  Page,
+  User,
+  LoginResponse,
+  AuditEvent,
+  Video,
+  VideoInput,
+  UploadPolicy,
+  Playback,
+  PlaybackPreparation,
+  ServiceStatus,
+} from "./types";
 // Empty means same-origin requests through Next.js, including inside Compose.
 const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
 let accessToken: string | null = null;
@@ -71,6 +83,20 @@ export type CameraInput = {
   timezone: string;
 };
 export const api = {
+  services: (signal?: AbortSignal) => request<ServiceStatus>("/api/services/status", { signal }),
+  uploadPolicy: () => request<UploadPolicy>("/api/videos/upload-policy"),
+  videos: (params: URLSearchParams) => request<Page<Video>>(`/api/videos?${params}`),
+  video: (id: string) => request<Video>(`/api/videos/${id}`),
+  createVideo: (body: VideoInput) =>
+    request<Video>("/api/videos", { method: "POST", body: JSON.stringify(body) }),
+  updateVideo: (id: string, body: { title: string; description: string | null }) =>
+    request<Video>(`/api/videos/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteVideo: (id: string) => request<void>(`/api/videos/${id}`, { method: "DELETE" }),
+  playback: (id: string) => request<Playback>(`/api/videos/${id}/playback`, { method: "POST" }),
+  playbackPreparation: (id: string, signal?: AbortSignal) =>
+    request<PlaybackPreparation>(`/api/videos/${id}/playback-preparation`, { signal }),
+  preparePlayback: (id: string) =>
+    request<PlaybackPreparation>(`/api/videos/${id}/playback-preparation`, { method: "POST" }),
   login: (email: string, password: string) =>
     request<LoginResponse>("/api/auth/login", {
       method: "POST",
@@ -109,12 +135,73 @@ export const api = {
     }),
   audit: (params: URLSearchParams) => request<Page<AuditEvent>>(`/api/audit-events?${params}`),
 };
-export async function checkBackend(): Promise<void> {
-  await request("/health/live", { authenticated: false });
-}
 export function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong. Try again.";
 }
 export function errorFields(error: unknown) {
   return error instanceof ApiError ? error.fields : {};
+}
+
+/** Stream the raw File, with network progress; no base64, FormData or whole-file arrayBuffer. */
+export function uploadVideoContent(
+  id: string,
+  file: File,
+  options: { timeoutSeconds: number; signal: AbortSignal; onProgress: (percent: number) => void },
+): Promise<Video> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const dispatchedToken = accessToken;
+    const abort = () => xhr.abort();
+    const cleanup = () => options.signal.removeEventListener("abort", abort);
+    xhr.open("PUT", `${baseUrl}/api/videos/${id}/content`);
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    if (dispatchedToken) xhr.setRequestHeader("Authorization", `Bearer ${dispatchedToken}`);
+    xhr.timeout = (options.timeoutSeconds + 120) * 1000;
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable)
+        options.onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    };
+    xhr.onload = () => {
+      cleanup();
+      let body;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        body = null;
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body) {
+        resolve(body as Video);
+        return;
+      }
+      if (xhr.status === 401 && dispatchedToken && accessToken === dispatchedToken)
+        unauthorizedHandler?.();
+      reject(
+        new ApiError(
+          xhr.status,
+          typeof body?.detail === "string"
+            ? body.detail
+            : `Upload could not be completed (HTTP ${xhr.status}). Check the library before retrying.`,
+        ),
+      );
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new ApiError(0, "Upload connection lost. Check the library before retrying."));
+    };
+    xhr.ontimeout = () => {
+      cleanup();
+      reject(new ApiError(408, "Upload request timed out. Check the library before retrying."));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new DOMException("Upload request canceled.", "AbortError"));
+    };
+    options.signal.addEventListener("abort", abort, { once: true });
+    if (options.signal.aborted) {
+      cleanup();
+      reject(new DOMException("Upload request canceled.", "AbortError"));
+      return;
+    }
+    xhr.send(file);
+  });
 }

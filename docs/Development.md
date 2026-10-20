@@ -13,17 +13,19 @@ Implemented foundations:
 - Shared typed environment settings and an initial execution context.
 - Compose infrastructure with persistent PostgreSQL, Redis, Qdrant, and SILO volumes.
 - A repeatable private S3 bucket initialization service.
-- Full development Compose services, source mounts, one-shot migrations and a frontend API proxy. Worker container is explicitly standby, not a functioning consumer.
+- Full development Compose services, source mounts, one-shot migrations and a frontend API proxy. The initial standby has since been extended with the explicitly requested playback-only RQ consumer.
 
 The next application slice adds login/JWT signing and validation, separate authentication/role middleware, fixed permissions, administrator-created users, account/password changes, camera metadata management, administrative audit, SQLAlchemy/psycopg persistence and an initial Alembic migration. These features connect frontend routes to backend APIs; they have not been tested at the user's request. See [Authentication and administration](Authentication_and_Admin.md) and [UI system](../DESIGN.md).
 
-Not yet implemented: video uploads/library APIs, line/zone camera configuration, video/job database migrations, Redis publishing/consumption, durable job claims and recovery, processing stages, HTTP model adapters, retrieval/grounding, LangChain/tool loops, query-purpose/returned-clip audit and evidence/citation checks. Placeholder pages and TODO handlers must not be represented as working product features.
+The [recording-library slice](Recording_Library.md) now adds uploads/library/playback, videos/artifacts migration 0002, audit names and header backend/worker presence. [Playback preparation](Playback_Preparation.md) adds migration 0003, explicit administrator conversion requests, a playback-only RQ consumer and durable outbox/recovery.
+
+Not yet implemented: line/zone camera configuration, indexing-job database migrations, indexing queue consumption/claims/checkpoints, AI processing stages, HTTP model adapters, retrieval/grounding, LangChain/tool loops, query-purpose/returned-clip audit and evidence/citation checks. Placeholder pages and TODO handlers must not be represented as working product features.
 
 ## Sources of requirements and choices
 
 The [cahier des charges](RecallCam_Cahier_des_Charges.md) remains unchanged and authoritative. [Architecture](Architecture.md) and [Sequential pipeline](Sequential_Pipeline.md) record supplemental decisions. Deployment changes do not remove any evaluation or feature requirements.
 
-[PostgreSQL application design](PostgreSQL_App_Design.md) records the agreed stateless JWT, fixed-role permissions and explicit upload-then-Process workflow, with application tables and queue/status views. Its users/cameras/administrative-audit subset now has an implementation and migration; upload/queue functionality remains unimplemented.
+[PostgreSQL application design](PostgreSQL_App_Design.md) records the agreed stateless JWT, fixed-role permissions and explicit upload-then-Process workflow, with application tables and queue/status views. Its users/cameras/administrative-audit subset now has an implementation and migration; uploads/library and playback-preparation jobs are now implemented; indexing queues/checkpoints remain future work.
 
 The source specification names MinIO among recommended tools. For this scaffold, choose [SILO](https://silo.pgsty.com/download/) as the S3-compatible object-storage deployment. [MinIO's community repository](https://github.com/minio/minio) is archived and no longer maintained; its existing source remains AGPL-licensed. This is a maintained deployment substitution behind an S3 interface, not an edit to the original requirements.
 
@@ -31,7 +33,7 @@ Image versions and credentials/ports are documented in the root `.env.example`. 
 
 ## Setup and daily commands
 
-Follow the [root README](../README.md): `docker compose up --build -d` starts application and infrastructure. Stop native frontend/backend servers if they hold the published ports. Inspect the worker with `docker compose exec worker python -m recallcam_worker --show-pipeline`; Compose uses its explicit standby mode until queue consumption is implemented.
+Follow the [root README](../README.md): `docker compose up --build -d` starts application and infrastructure. Stop native frontend/backend servers if they hold the published ports. Inspect the worker with `docker compose exec worker python -m recallcam_worker --show-pipeline`; Compose uses `--media` for explicit playback preparation; AI stages remain unavailable.
 
 Run Compose commands from the repository root. Root `.env` supplies selected environment settings; frontend does not receive backend/model secrets and does not mount `front/.env.local`. Browser calls use the frontend origin and its server-side backend proxy. Backend/worker share `/app/data` scratch storage and a cache volume; object data remains in its separate persistent storage volume. Host `.venv`, `node_modules` and `.next` are excluded from image contexts.
 
@@ -73,3 +75,7 @@ The subsequent authentication/admin change deliberately did not run automated te
 The later full-container development packaging was not built, launched, config-validated or tested, also at the user's request. Earlier host results do not validate these Docker images. The source specification remains unchanged.
 
 The later UI redesign follows the web-semantique visual reference, updates the shared shell and all existing screens, and adds a real active-camera preview to the overview using the existing camera API. The [UI system](../DESIGN.md) and [frontend instructions](../front/AGENTS.md) document it. Source editing and formatting were performed; no tests, build, typecheck, HTTP requests or browser checks were run. Earlier scaffold verification does not validate the redesigned interface.
+
+The recording-library/status slice was source-edited/formatted and its dependency lock regenerated; no tests, lint/type checks, builds or live application requests were run. The user attempted startup; migrate logs exposed an ORM argument error, which was corrected in source. No successful migration or functional verification is claimed. User-run migration 0002 and stack rebuild are required before trying the new pages.
+
+The later explicit playback-preparation slice adds the RQ/JSON consumer and PostgreSQL media-job outbox/recovery, migration 0003, shared media helpers and the complete player request/status/retry UI. See [Playback preparation](Playback_Preparation.md). Dependency resolution/upstream API inspection and source formatting were performed; no tests, lint/type checks, image build, migration, FFmpeg execution or live checks were run. This does not implement AI indexing.

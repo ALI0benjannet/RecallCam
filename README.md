@@ -2,14 +2,14 @@
 
 Video search and investigation with timestamped evidence. Docker Compose runs the frontend, backend, worker and infrastructure. Only LLM/VLM inference servers run natively or at another configured HTTP endpoint.
 
-The application currently implements login, fixed-role permissions, administrator-created accounts, camera metadata and administrative audit. Uploads, indexing and RAG remain future work. The worker container explicitly starts in standby until its queue consumer and durable job processing are implemented.
+The application currently implements login, fixed-role permissions, administrator-created accounts, camera metadata, private recording uploads/library/playback and administrative audit with readable names. Indexing and RAG remain future work. The worker consumes explicitly requested playback-preparation jobs through RQ; it does not run AI indexing. Uploads still enqueue nothing.
 
 ## Project structure
 
 ```text
 front/       Next.js, TypeScript, Tailwind/shadcn UI, frontend Dockerfile
 backend/     FastAPI application and query/RAG modules
-worker/      Separate worker process, sequential runner and stage TODOs
+worker/      Playback conversion consumer, sequential AI runner and stage TODOs
 shared/      Shared Python settings, contracts and database adapters
 configs/     Versioned processing policy and prompt location
 migrations/  Alembic application database migrations
@@ -46,16 +46,16 @@ docker compose logs -f backend worker front
 
 Compose waits for PostgreSQL, runs the `migrate` service, then starts the application. The private S3 bucket is created by `storage-init`. Both initialization containers normally finish successfully and exit.
 
-| Service | Default host address |
-| --- | --- |
-| Frontend | `http://localhost:3000/login` |
-| Backend / OpenAPI | `http://localhost:8000/docs` |
-| PostgreSQL | `127.0.0.1:5432` |
-| Redis | `127.0.0.1:6379` |
-| Qdrant dashboard | `http://localhost:6333/dashboard` |
+| Service                              | Default host address                              |
+| ------------------------------------ | ------------------------------------------------- |
+| Frontend                             | `http://localhost:3000/login`                     |
+| Backend / OpenAPI                    | `http://localhost:8000/docs`                      |
+| PostgreSQL                           | `127.0.0.1:5432`                                  |
+| Redis                                | `127.0.0.1:6379`                                  |
+| Qdrant dashboard                     | `http://localhost:6333/dashboard`                 |
 | S3-compatible storage / SILO console | `http://localhost:9000` / `http://localhost:9001` |
 
-The frontend proxies `/api/*` and `/health/live` to `backend:8000`. Browser requests stay on the frontend origin, so Docker-only names never become browser API addresses. Root `.env` configures Compose; `front/.env.local` is not copied or mounted into the frontend container. Only selected frontend settings enter that service.
+The frontend proxies `/api/*` and `/health/live` to `backend:8000`. Private playback/thumbnail links use the separate browser-reachable `S3_PUBLIC_ENDPOINT_URL`, normally `http://localhost:9000`; update it when the storage port or deployment host changes. Browser requests stay on the frontend origin, so Docker-only names never become browser API addresses. Root `.env` configures Compose; `front/.env.local` is not copied or mounted into the frontend container. Only selected frontend settings enter that service.
 
 ## Create the first administrator
 
@@ -79,7 +79,7 @@ docker compose restart worker
 docker compose exec worker python -m recallcam_worker --show-pipeline
 ```
 
-For a newly added migration, apply it deliberately with `docker compose run --rm migrate`. Backend startup itself does not create tables. After changing `.env` values, recreate the affected services with `docker compose up -d`; a plain restart does not reload container environment variables.
+For newly added dependencies and migrations, run `docker compose build`, then `docker compose run --rm migrate`, then `docker compose up -d`. For a migration without dependency changes, apply it with `docker compose run --rm migrate`. Backend startup itself does not create tables. After changing `.env` values, recreate the affected services with `docker compose up -d`; a plain restart does not reload container environment variables.
 
 Named volumes retain PostgreSQL, Redis, Qdrant, object storage, shared scratch data and future local model caches. `docker compose stop` stops services; `docker compose down` removes containers/network and retains data. Adding `-v` deletes named volumes and their stored data.
 
@@ -110,8 +110,13 @@ At the user's request, this containerization change was not built, started or te
 - [Sequential pipeline](docs/Sequential_Pipeline.md)
 - [PostgreSQL application design](docs/PostgreSQL_App_Design.md)
 - [Authentication and administration](docs/Authentication_and_Admin.md)
+- [Recording library and status indicators](docs/Recording_Library.md)
 - [Container guide](docs/Containers.md)
 - [Product context](PRODUCT.md) and [UI system](DESIGN.md)
 - [Development guide](docs/Development.md)
 
 The supplemental documents and container packaging do not reduce the specification's required features, evaluation or privacy/data-handling requirements.
+
+The recording-library/status change adds migration 0002 and locked boto3/Redis dependencies. FFmpeg/FFprobe are provided by the Python image. The header shows live API/worker presence; a connected standby worker does not process videos. [Library implementation and limitations](docs/Recording_Library.md). This slice was not built or functionally tested; the user performs verification.
+
+The later [explicit playback preparation](docs/Playback_Preparation.md) adds migration 0003 and the locked RQ dependency. A decoding error offers administrators Prepare playback; the worker creates a private H.264 MP4 viewing artifact while retaining the original. Uploads never enqueue conversion or indexing automatically. Compose now uses `--media` for playback-only jobs; AI indexing remains unavailable. Rebuild with `docker compose build backend`, apply with `docker compose run --rm migrate`, then recreate with `docker compose up -d --force-recreate backend worker`. Source/lock updates were not built, migrated, converted or tested by the agent, per user instruction.

@@ -20,19 +20,19 @@ Administrators create user accounts. Login issues a signed expiring JWT; there a
 
 The team develops on different platforms. Service URLs, model names, credentials and processing device choices are configured, not hard-coded. FastAPI serves application and query logic; a separate worker indexes videos; VLM/LLM inference uses external HTTP services.
 
-Frontend, backend, worker and infrastructure are packaged in Docker Compose. Only LLM/VLM serving stays native/outside Docker. The current worker container is explicitly standby until queue consumption is implemented; packaging is not a claim of completed indexing.
+Frontend, backend, worker and infrastructure are packaged in Docker Compose. Only LLM/VLM serving stays native/outside Docker. The worker currently consumes explicitly requested playback-preparation jobs only; AI indexing is still unavailable.
 
 ## Capabilities and Constraints
 
 The authoritative requirements cover multilingual English/French/Arabic questions, cited answers, counting from structured events, retention/deletion, access controls and audit, activity-based indexing and resumable processing. Full details live in the specification and supplemental architecture documents; this context does not reduce their scope.
 
-The current implementation slice is authentication, administrator-created accounts, camera metadata management and administrative audit. Uploads, indexing and investigation answers must remain visibly unavailable until connected. No invented footage, metrics, job progress or working search results belong in the interface.
+The current implementation slice is authentication, administrator-created accounts, camera metadata management, private recording uploads/library/playback, explicitly enqueued browser compatibility copies and administrative audit. An administrator can request conversion after a decoding error; uploads queue nothing. Original footage is preserved. Indexing and investigation answers remain visibly unavailable. Worker presence identifies playback preparation rather than AI readiness. No invented footage, metrics, job progress or working search results belong in the interface.
 
 ## Brand Commitments
 
 The name is RecallCam. The user delegated the color palette and visual direction, requested Tailwind CSS and shadcn/ui where appropriate, and required action notifications throughout the app. Avoid purple AI-style pages. Use direct, factual product language and evidence terminology.
 
-The user requested a richer logo with recognizable camera/surveillance imagery and an AI cue. The current identity uses a CCTV camera with integrated circuit nodes, retaining the forest-green/amber palette. Preserve this recognizable camera-and-AI direction in future brand changes.
+The user refined the logo direction with a Sayl mascot reference: RecallCam should feel alive, friendly and expressive while remaining clearly about surveillance. The current v3 identity is a rounded cream CCTV-camera companion with an amber camera-lens eye, cheerful wink and smile, swivel mount and forest-green recall swoosh. Preserve its personality and camera silhouette; the earlier technical circuit emblem was superseded. The mascot is brand artwork, not a claim of person identification or a new product feature.
 
 Visual choices and reusable UI rules belong in [DESIGN.md](DESIGN.md). The generated logo and app icon are in `front/public/brand/`, with provenance recorded beside them.
 

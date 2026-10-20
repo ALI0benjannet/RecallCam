@@ -1,8 +1,10 @@
 # PostgreSQL application design
 
-Status: product decisions and proposed application design, with a first implementation/migration for `users`, `cameras` and `audit_events`. Other tables below remain proposed. See [Authentication and administration](Authentication_and_Admin.md) for the implemented slice and its untested status. The [cahier des charges](RecallCam_Cahier_des_Charges.md), especially Sections 4, 5, 7 (M1/M7), 8 and 10, remains authoritative. This document adds application choices alongside [Architecture](Architecture.md) and [Sequential pipeline](Sequential_Pipeline.md).
+Status: product decisions and proposed application design, with a first implementation/migration for `users`, `cameras` and `audit_events`. `videos` and `artifacts` now have a second migration; indexing-job/online-query tables remain proposed. See [Recording library](Recording_Library.md) for the exact implemented subset and recovery limits. See [Authentication and administration](Authentication_and_Admin.md) for the implemented slice and its untested status. The [cahier des charges](RecallCam_Cahier_des_Charges.md), especially Sections 4, 5, 7 (M1/M7), 8 and 10, remains authoritative. This document adds application choices alongside [Architecture](Architecture.md) and [Sequential pipeline](Sequential_Pipeline.md).
 
 ## 1. Accounts and authorization
+
+Implementation update: migration `0003_playback_preparation` adds separate `media_jobs` and a unique published `playback` artifact per video. These explicit administrator requests use PostgreSQL as an outbox for RQ and do not implement the proposed indexing-job/checkpoint tables below. Upload and AI Process remain separate. See [Playback preparation](Playback_Preparation.md) for the exact schema, role policy, recovery and unverified runtime status.
 
 Authentication uses signed, expiring JWT access tokens. There is no authentication-session table, refresh-token table or server-side login session. When an access token expires, the user signs in again. Validate the signature, allowed algorithm, expiry, issuer and audience on protected requests; expiry checking alone is insufficient.
 
@@ -10,14 +12,14 @@ Missing, invalid or expired credentials return `401 Unauthorized` with the appro
 
 Administrators create accounts and assign one of three fixed roles. Public self-registration and configurable permission-management screens are outside this initial design. Permissions are defined centrally in application code and enforced by the backend, including file/evidence access, rather than only by hidden UI controls.
 
-| Feature | Operator | Supervisor | Administrator |
-| --- | --- | --- | --- |
-| Browse accessible footage, ask questions, view answers/evidence, submit feedback | Yes | Yes | Yes |
-| Export evidence and inspect query audit logs | No | Yes | Yes |
-| Standing queries, when Stage 2 is implemented | No | Yes | Yes |
-| Create users and assign roles | No | No | Yes |
-| Manage cameras/videos, upload and enqueue indexing | No | No | Yes |
-| Manage retention and model versions | No | No | Yes |
+| Feature                                                                          | Operator | Supervisor | Administrator |
+| -------------------------------------------------------------------------------- | -------- | ---------- | ------------- |
+| Browse accessible footage, ask questions, view answers/evidence, submit feedback | Yes      | Yes        | Yes           |
+| Export evidence and inspect query audit logs                                     | No       | Yes        | Yes           |
+| Standing queries, when Stage 2 is implemented                                    | No       | Yes        | Yes           |
+| Create users and assign roles                                                    | No       | No         | Yes           |
+| Manage cameras/videos, upload and enqueue indexing                               | No       | No         | Yes           |
+| Manage retention and model versions                                              | No       | No         | Yes           |
 
 Administrator inheritance of all features is an explicit project choice. Supervisor inheritance follows Section 5.1. A supervisor's additional permissions do not include assigning roles or managing users.
 
@@ -53,20 +55,20 @@ Duration, dimensions and thumbnail are library metadata, independent of running 
 
 ## 3. Proposed application tables
 
-The following is the proposed application-schema scope. The first migration implements users, camera metadata and administrative audit. Other SQL types, migrations and domain contracts remain to be implemented. Camera line/zone configuration is deferred to perception integration.
+The following is the proposed application-schema scope. The first migration implements users, camera metadata and administrative audit. The recording-library migration now also implements videos and artifacts; job/processing/online-query types and migrations remain to be implemented. Camera line/zone configuration is deferred to perception integration.
 
-| Table | Main fields and responsibility |
-| --- | --- |
-| `users` | Account fields above; one fixed role per user, administrator-created accounts. |
-| `cameras` | `camera_id`, name, description/location, timezone, active status, timestamps. |
-| `camera_configurations` | Camera, version, line/zone configuration, creator, timestamps; jobs reference the effective version for reproducible events. |
-| `videos` | `video_id`, camera, uploader, original filename, source bucket/key, content type, byte size, checksum when available, recording start/end, duration, width/height/frame rate, upload state, metadata state, timestamps. |
-| `artifacts` | Derived file references: video, optional producing job, kind (thumbnail, frame, clip, etc.), bucket/key, size, content type, checksum, timestamps. Media bytes remain in object storage. |
-| `jobs` | `job_id`, video, requesting user, type, status, enqueue order, configuration revision and secret-free snapshot, current stage, timestamps, last error. |
-| `job_stages` | Job/stage identity, order, status, processed/total units when known, checkpoint, output references, metrics, timestamps, last error. |
-| `job_attempts` | Job, attempt number, worker identity, claim/heartbeat/lease information, timing, outcome and error; preserve retry history. |
-| `outbox_events` | Durable request to publish an indexing job; payload, ordered identity, delivery attempts, publication time/error. |
-| `audit_events` | Actor, action, resource reference, timestamp and bounded metadata; record user/role changes, upload/process actions and other specified audit operations without tokens/passwords. |
+| Table                   | Main fields and responsibility                                                                                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`                 | Account fields above; one fixed role per user, administrator-created accounts.                                                                                                                                          |
+| `cameras`               | `camera_id`, name, description/location, timezone, active status, timestamps.                                                                                                                                           |
+| `camera_configurations` | Camera, version, line/zone configuration, creator, timestamps; jobs reference the effective version for reproducible events.                                                                                            |
+| `videos`                | `video_id`, camera, uploader, original filename, source bucket/key, content type, byte size, checksum when available, recording start/end, duration, width/height/frame rate, upload state, metadata state, timestamps. |
+| `artifacts`             | Derived file references: video, optional producing job, kind (thumbnail, frame, clip, etc.), bucket/key, size, content type, checksum, timestamps. Media bytes remain in object storage.                                |
+| `jobs`                  | `job_id`, video, requesting user, type, status, enqueue order, configuration revision and secret-free snapshot, current stage, timestamps, last error.                                                                  |
+| `job_stages`            | Job/stage identity, order, status, processed/total units when known, checkpoint, output references, metrics, timestamps, last error.                                                                                    |
+| `job_attempts`          | Job, attempt number, worker identity, claim/heartbeat/lease information, timing, outcome and error; preserve retry history.                                                                                             |
+| `outbox_events`         | Durable request to publish an indexing job; payload, ordered identity, delivery attempts, publication time/error.                                                                                                       |
+| `audit_events`          | Actor, action, resource reference, timestamp and bounded metadata; record user/role changes, upload/process actions and other specified audit operations without tokens/passwords.                                      |
 
 Use foreign keys, constrained roles/statuses, nonnegative duration/size, valid time intervals, and indexed camera/time and job/status fields. Preserve Section 8 schema and producer version metadata in exchanged/persisted domain records. Use JSONB for versioned configuration and checkpoints, not as a substitute for typed identity/status/time columns.
 
@@ -93,14 +95,14 @@ prepare → perception → visual_embeddings → captions
 
 The queue page combines video metadata with job records:
 
-| Display | Data source |
-| --- | --- |
-| Thumbnail, filename, camera, recording period, duration | Video and artifact records. |
-| Awaiting publication / waiting / processing / failed / complete | Durable job state. |
-| Current stage | `jobs.current_stage` and its `job_stages` record. |
-| Progress within that stage | Processed/total units with a stated unit, when available. |
-| Approximate waiting position | Derived from eligible jobs in enqueue order; do not persist a manually updated position column. |
-| Retry/error information | Job, stage and attempt records. |
+| Display                                                         | Data source                                                                                     |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Thumbnail, filename, camera, recording period, duration         | Video and artifact records.                                                                     |
+| Awaiting publication / waiting / processing / failed / complete | Durable job state.                                                                              |
+| Current stage                                                   | `jobs.current_stage` and its `job_stages` record.                                               |
+| Progress within that stage                                      | Processed/total units with a stated unit, when available.                                       |
+| Approximate waiting position                                    | Derived from eligible jobs in enqueue order; do not persist a manually updated position column. |
+| Retry/error information                                         | Job, stage and attempt records.                                                                 |
 
 Example: video A is processing at VLM captions, video B is waiting first, and video C is uploaded but has no job. Video C appears in the library, not the processing queue. Show unknown progress/ETA as unknown rather than infer a time estimate from the number of completed stages; stages have different costs.
 

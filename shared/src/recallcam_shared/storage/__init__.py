@@ -1,1 +1,1 @@
-"""Future storage interface and S3/filesystem adapters using configured endpoints."""
+"""Private S3-compatible object storage; filesystem adapter remains future work."""

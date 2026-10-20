@@ -13,10 +13,12 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from recallcam_backend.middleware import AuthenticationMiddleware, RoleMiddleware
-from recallcam_backend.routes import audit, auth, cameras, health, queries, users
+from recallcam_backend.routes import audit, auth, cameras, health, queries, services, users, videos
 from recallcam_backend.security import TokenService, hash_password
+from recallcam_shared.media import InvalidMedia, MediaToolUnavailable
 from recallcam_shared.database.connection import create_database_engine, create_session_factory
 from recallcam_shared.settings import Settings
+from recallcam_shared.storage.s3 import StorageUnavailable
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -44,6 +46,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             content={"detail": "The application database is unavailable. Try again shortly."},
         )
 
+    @app.exception_handler(StorageUnavailable)
+    @app.exception_handler(MediaToolUnavailable)
+    async def media_service_unavailable(request: Request, error: Exception) -> JSONResponse:
+        return JSONResponse(status_code=503, content={"detail": str(error)})
+
+    @app.exception_handler(InvalidMedia)
+    async def invalid_media(request: Request, error: InvalidMedia) -> JSONResponse:
+        return JSONResponse(status_code=422, content={"detail": str(error)})
+
     def register_api_router(router: APIRouter) -> None:
         for route in router.routes:
             if isinstance(route, APIRoute):
@@ -53,7 +64,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(router, prefix="/api")
 
     app.include_router(health.router)
-    for router in (auth.router, users.router, cameras.router, audit.router, queries.router):
+    for router in (
+        auth.router,
+        users.router,
+        cameras.router,
+        videos.router,
+        audit.router,
+        services.router,
+        queries.router,
+    ):
         register_api_router(router)
 
     # Starlette wraps in reverse registration order: CORS -> authentication -> roles -> route.
@@ -62,7 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"],
     )
 

@@ -65,7 +65,7 @@ export default function AuditPage() {
     <>
       <PageHeading
         title="Audit log"
-        description="Review recorded account, access and camera actions across the workspace."
+        description="Review account, access, camera and recording actions across the workspace."
       />
       <div className="table-shell">
         <div className="panel-header">
@@ -94,8 +94,8 @@ export default function AuditPage() {
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
-                aria-label="Search audit actions"
-                placeholder="Search actions"
+                aria-label="Search audit actions or names"
+                placeholder="Search actions, people or resources"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 className="h-10 bg-muted/45 pl-9"
@@ -158,11 +158,11 @@ export default function AuditPage() {
                     <TableCell className="max-w-xs text-xs">
                       <p>{item.resource_type}</p>
                       <p className="mt-1.5 break-all text-[11px] text-muted-foreground">
-                        {item.resource_id ?? "—"}
+                        {item.resource_name}
                       </p>
                     </TableCell>
                     <TableCell className="max-w-xs break-all pr-5 text-[11px] text-muted-foreground">
-                      {item.actor_id ?? "System"}
+                      {item.actor_name}
                     </TableCell>
                   </TableRow>
                 ))}

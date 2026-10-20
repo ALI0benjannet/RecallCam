@@ -36,21 +36,21 @@ Inside the container the API listens on port 8000, uses Compose service addresse
 
 ## HTTP contracts
 
-| Endpoint | Behavior and access |
-| --- | --- |
-| `POST /api/auth/login` | Public; JSON `{email,password}` returns access token, lifetime and current user. |
-| `GET /api/auth/me` | Any active authenticated user; returns account and effective permission strings. |
-| `POST /api/auth/change-password` | Current password plus new password; returns 204 and invalidates the account's old tokens. |
-| `GET /api/users` | Administrator; paginated list, optional `search`, `role`, `is_active`. |
-| `POST /api/users` | Administrator; email, display name, password and fixed role. |
-| `GET /api/users/{user_id}` | Administrator; account details without password hash. |
-| `PATCH /api/users/{user_id}` | Administrator; display name, role, active status. |
-| `POST /api/users/{user_id}/password` | Administrator resets another account's password; returns 204 and invalidates its tokens. |
-| `GET /api/cameras` | Any authenticated user; optional `search` and `include_archived`. |
-| `GET /api/cameras/{camera_id}` | Any authenticated user; camera metadata. |
-| `POST /api/cameras` | Administrator; name, optional location/description, required IANA timezone. |
-| `PATCH /api/cameras/{camera_id}` | Administrator; edit metadata or set `is_active=false` to archive. |
-| `GET /api/audit-events` | Supervisor or administrator; paginated action history, optional `search`. |
+| Endpoint                             | Behavior and access                                                                       |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `POST /api/auth/login`               | Public; JSON `{email,password}` returns access token, lifetime and current user.          |
+| `GET /api/auth/me`                   | Any active authenticated user; returns account and effective permission strings.          |
+| `POST /api/auth/change-password`     | Current password plus new password; returns 204 and invalidates the account's old tokens. |
+| `GET /api/users`                     | Administrator; paginated list, optional `search`, `role`, `is_active`.                    |
+| `POST /api/users`                    | Administrator; email, display name, password and fixed role.                              |
+| `GET /api/users/{user_id}`           | Administrator; account details without password hash.                                     |
+| `PATCH /api/users/{user_id}`         | Administrator; display name, role, active status.                                         |
+| `POST /api/users/{user_id}/password` | Administrator resets another account's password; returns 204 and invalidates its tokens.  |
+| `GET /api/cameras`                   | Any authenticated user; optional `search` and `include_archived`.                         |
+| `GET /api/cameras/{camera_id}`       | Any authenticated user; camera metadata.                                                  |
+| `POST /api/cameras`                  | Administrator; name, optional location/description, required IANA timezone.               |
+| `PATCH /api/cameras/{camera_id}`     | Administrator; edit metadata or set `is_active=false` to archive.                         |
+| `GET /api/audit-events`              | Supervisor or administrator; paginated action history, optional `search`.                 |
 
 All paginated endpoints accept `page` (default 1) and `page_size` (default 20, maximum 100), returning `{items,total,page,page_size}`. Contracts are in `recallcam_shared.contracts.accounts`. Login and account responses include `permissions`; roles are `operator`, `supervisor` and `administrator`. Token claims contain account identity and password version, not an authoritative role. Each protected request resolves the account's current active status and role from PostgreSQL, so role changes take effect immediately. This account lookup does not create a session record.
 
@@ -64,6 +64,12 @@ Register API routers through `register_api_router` in `main.py`; its explicit po
 
 ## Remaining scope
 
-Uploads, durable video/job records, processing queues, retrieval and RAG remain unimplemented. The existing query endpoint requires `queries:create` and still returns HTTP 501. Camera line/zone configuration versioning will be added with perception configuration; this slice implements camera identity/location/timezone and archive status only. Camera timezone changes do not rewrite historical recording timestamps.
+Private uploads and video/artifact records now have routes and migration 0002; see [Recording library](../docs/Recording_Library.md). Durable indexing-job records, processing queues, retrieval and RAG remain unimplemented. The existing query endpoint requires `queries:create` and still returns HTTP 501. Camera line/zone configuration versioning will be added with perception configuration; this slice implements camera identity/location/timezone and archive status only. Camera timezone changes do not rewrite historical recording timestamps.
 
 As requested for this change, no automated tests, lint/type/build checks, live endpoint requests or model benchmarks were run. Setup/migration commands are documented for the developer to run; installation is not a verification result.
+
+## Recording library and monitoring
+
+[Recording library](../docs/Recording_Library.md) documents the authenticated `/api/videos` routes, raw streaming PUT, bounded FFprobe/FFmpeg metadata/thumbnail work, S3 playback grants and retryable deletion. Camera/start-time/source identity remain immutable; title/description edits are audited. `/api/services/status` reports authenticated API reachability and the standby/media worker Redis heartbeat, distinguishing explicit playback preparation from AI indexing readiness. General audit responses include resolved actor/resource names with removed-record fallbacks. No pipeline or model work is enabled.
+
+[Playback preparation](../docs/Playback_Preparation.md) adds administrator-only explicit POST and footage-reader GET status at `/api/videos/{id}/playback-preparation`. The API commits a durable media request before publishing its ID to RQ/JSON. It does no full conversion; the worker creates a private H.264 copy and playback grants prefer it when ready. Migration 0003 and rebuilt Python dependencies are required. Uploads still enqueue nothing. No tests, builds, migration or live checks were run for this change.

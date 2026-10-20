@@ -83,11 +83,11 @@ Descriptions use a readable 24–28px line height and constrained measure. Use t
 
 Below 1024px, the navigation opens in the shared Radix/shadcn dialog with keyboard dismissal and focus management. Keep the account link accessible from the header. Forms stack and data tables scroll within their own containers; the page must not overflow horizontally.
 
-The overview combines a sage orientation banner, a real active-camera preview, permission-aware shortcuts, an explicit on-demand backend check and the current role description. Camera totals come from the existing paginated API; do not invent recording counts, processed hours, progress or service health.
+The overview combines a sage orientation banner, a real active-camera preview, permission-aware shortcuts, the current role description and shared header service indicators. Camera totals come from the existing paginated API; do not invent recording counts, processed hours, progress or service health.
 
 Login uses a forest identity panel and a focused white credential panel. The diagram is conceptual timeline geometry. On small screens, retain compact branding and prioritize the sign-in form. No public signup, fake password recovery or unimplemented OAuth buttons.
 
-Camera, user and audit lists share one bordered panel: panel heading/count, integrated search/filter toolbar, table, pagination. Account and camera edits retain focused dialogs; account settings use profile and password panels. Upload, library and investigation pages have distinct layouts but must prominently say **Not connected yet** and keep unavailable controls disabled.
+Camera, user and audit lists share one bordered panel: panel heading/count, integrated search/filter toolbar, table, pagination. Account and camera edits retain focused dialogs; account settings use profile and password panels. Upload and library pages use real APIs and preserve their distinct form/table/player layouts. Investigation remains marked **Not connected yet**; Process stays disabled until indexing is implemented. The upload progress percentage measures bytes sent, not completed storage or indexing.
 
 ## Elevation & Depth
 
@@ -97,7 +97,7 @@ White surfaces and thin borders establish hierarchy. Primary buttons may use a s
 
 Controls use 8px corners, ordinary surfaces/dialogs 12px and prominent feature compositions 16px. Small status labels can use rounded rectangles; round avatars represent users. Use Lucide consistently for interface icons.
 
-`Brand` supplies live wordmark text and the current CCTV-camera/AI-circuit mark on a pale tile. Preserve the requested recognizable camera and AI direction. Use [recallcam-mark-v2.png](front/public/brand/recallcam-mark-v2.png) and [recallcam-icon-v2.png](front/public/brand/recallcam-icon-v2.png); [asset provenance](front/public/brand/README.md) records their prompts. Keep aspect ratios and empty image alt text when adjacent text already names the brand. Earlier abstract assets remain archived.
+`Brand` supplies live wordmark text and the current friendly surveillance-camera mascot on a pale tile. The user explicitly requested the warmth and personality of their Sayl reference: a rounded cream CCTV head with an amber camera-lens eye, cheerful winking eye and smile, compact swivel mount and forest-green recall swoosh. Preserve its expressive character; do not flatten it back into a sterile technical camera/circuit icon. Gentle shading is part of this illustrated brand asset, not permission to introduce gradients or glow across the UI. Use [recallcam-mark-v3.png](front/public/brand/recallcam-mark-v3.png) and [recallcam-icon-v3.png](front/public/brand/recallcam-icon-v3.png); [asset provenance](front/public/brand/README.md) records the reference role and exact prompt. Keep aspect ratios and empty image alt text when adjacent text already names the brand. Previous v1/v2 assets remain archived.
 
 `EvidenceGraphic` is a reusable, decorative camera-and-timeline SVG. It conveys the product concept and contains no fabricated footage, timestamps or job progress. Its colors come from shared tokens.
 
@@ -123,3 +123,17 @@ Preserve visible focus, meaningful labels, dialog titles, accessible icon action
 - Use purposeful diagram geometry; no fabricated screenshots or surveillance imagery.
 - Avoid repetitive icon-card grids, excessive eyebrow labels, oversized admin-page heroes and per-page themes.
 - Update this document, frontend instructions and shared styles together when changing the design system.
+
+Service indicators live in the authenticated header: neutral while checking, green check for a confirmed connection, red cross when unavailable. Include readable labels and accessible state text. A connected media worker is labeled Playback; optional diagnostic standby remains labeled Standby. Neither implies AI indexing readiness. Audit rows render actor/resource names, with descriptive removed-record fallbacks; UUIDs remain API identities rather than table labels. Private thumbnails use ordinary image elements, not the shared Next image optimizer.
+
+## Recording player
+
+Use the shared `RecordingPlayer` in `front/src/components/recording-player.tsx`. It integrates **Video.js 10.1.0** (`@videojs/react`, Apache-2.0) with the packaged Neutral video skin. Use its public CSS properties in `recording-player.css`: sage/selection accents, forest accent text and the shared Manrope font. The dark viewing surface keeps footage legible; `object-fit: contain` preserves the complete camera image. Never crop surveillance footage to fill a decorative frame.
+
+The library player includes a scrubber, elapsed/duration display, play/pause, volume, playback speed settings, player-scoped keyboard shortcuts, touch seeking, buffering/error states, fullscreen and picture-in-picture where available. The page provides a collapsible shortcut reference. Retain the library's explicit open/refresh-link actions and error toasts. Ordinary play/pause/seek actions need no toast.
+
+Playback uses private stored media through the native HTML video adapter. No external hosting, analytics, casting extension, fabricated subtitle track, storyboard or quality rendition is configured. Unavailable capabilities follow the skin's availability handling. The player does not add codecs or transcode files; keep MPEG compatibility guidance visible. Future citations must seek using original-recording relative seconds through the shared handle, with absolute/camera times resolved from the source metadata. Citation navigation, event timelines and evidence strips remain future M7 work.
+
+Playback preparation extends source selection: the backend prefers a completed H.264 MP4 viewing copy when available. The page labels it **Viewing MP4 copy**, retaining original metadata. Browser format/decoding errors offer the explicit administrator **Prepare playback** action, while network failures suggest refreshing the link. The shared `PlaybackPreparationPanel` displays real queued/running stages, ready/failed states and explicit retry; it never fabricates percentage progress or starts indexing. Other viewers can inspect status/play ready copies and are told when an administrator is needed. Show **Play MP4 copy** after completion, preserving the private authorization flow. See [Playback preparation](docs/Playback_Preparation.md).
+
+On renewal of a playback link for the same recording, preserve position, paused state, speed, volume and mute in memory. Resume only if playback was already running; a browser may require pressing play again. Do not persist signed media links or resume state to browser storage. Remount the player when its source changes; do not carry one recording's position into another recording.

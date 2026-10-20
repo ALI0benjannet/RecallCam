@@ -17,15 +17,17 @@ Open `http://localhost:3000/login`. There is no public sign-up or default accoun
 
 ## Implemented routes
 
-| Route                          | Scope                                                                                                                                  |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `/login`                       | Email/password login with JWT access token.                                                                                            |
-| `/`                            | Role-aware overview, real active-camera preview/count, workspace shortcuts and on-demand backend process check.                        |
-| `/account`                     | Current account, role description and change own password.                                                                             |
-| `/admin/users`                 | Administrator: list/search/filter users, create accounts, edit names/roles, activate/deactivate and reset another user's password.     |
-| `/cameras`                     | All authenticated roles read; administrator creates/edits/archives/restores cameras with location, description and recording timezone. |
-| `/audit`                       | Supervisor/administrator application audit list. Query/evidence auditing remains future work.                                          |
-| `/upload`, `/library`, `/chat` | Explicit placeholders; uploads, indexing and investigation are not connected yet.                                                      |
+| Route                            | Scope                                                                                                                                  |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                         | Email/password login with JWT access token.                                                                                            |
+| `/`                              | Role-aware overview, real active-camera preview/count, workspace shortcuts and shared header API/worker status.                        |
+| `/account`                       | Current account, role description and change own password.                                                                             |
+| `/admin/users`                   | Administrator: list/search/filter users, create accounts, edit names/roles, activate/deactivate and reset another user's password.     |
+| `/cameras`                       | All authenticated roles read; administrator creates/edits/archives/restores cameras with location, description and recording timezone. |
+| `/audit`                         | Supervisor/administrator application audit list. Query/evidence auditing remains future work.                                          |
+| `/upload`                        | Administrator: file, active camera and original recording time; upload/retry without indexing.                                         |
+| `/library`, `/library/[videoId]` | Filtered archive, private original playback, metadata; administrator edits/deletes/retries.                                            |
+| `/chat`                          | Explicit placeholder; indexing and investigation remain unavailable.                                                                   |
 
 Navigation and direct route views are permission guarded. Backend JWT/role enforcement remains authoritative. A global Sonner toaster is mounted for all pages, including login; forms also show inline server validation errors. User deactivation and camera archival require confirmation.
 
@@ -50,3 +52,26 @@ Per the user's request, this authentication/camera implementation was not exerci
 The later containerization/proxy change was also not built, started or tested, at the user's request.
 
 The subsequent full UI redesign was source-edited and formatted only. Tests, builds, typechecks, API requests and browser checks were not run, following the same user instruction.
+
+The [recording-library slice](../docs/Recording_Library.md) adds real uploads, filtering, playback and metadata actions. Header service presence polls automatically with green/red icons; worker presence is standby only. Audit responses render names. New Python dependencies require rebuilding the stack and running migration 0002. No build/typecheck/browser/API tests were run for this change.
+
+Upload formats come from the backend upload-policy endpoint, including `.mpg` / `.mpeg`. These originals can be stored and thumbnailed; the interface explains that MPEG browser playback may require an H.264 MP4 copy. The app does not transcode complete recordings during upload.
+
+## Recording player
+
+The recording detail page uses the reusable `src/components/recording-player.tsx`, integrating [Video.js](https://videojs.org/docs/guides/installation/react) through `@videojs/react@10.1.0` (Apache-2.0). It uses the packaged Neutral skin and native HTML video adapter, with local CSS matching RecallCam's sage accents and Manrope. No external video host, CDN script or analytics extension is configured.
+
+Controls include scrubbing, time display, volume, playback speed, keyboard shortcuts, touch seeking, fullscreen and picture-in-picture subject to browser capabilities. Focus the player for shortcuts; the page includes a reference. It keeps the complete image visible without cropping. Captions, preview storyboards and multiple quality renditions require actual supplied tracks/sources; none are generated or invented here. MPEG/container decoding still depends on the browser.
+
+An explicit Open player action obtains a private temporary URL. Refreshing it snapshots position and playback preferences in memory, remounts for a changed source and restores after metadata loads. Previously playing media attempts to resume; blocked autoplay asks the user to press play. The shared handle exposes `seekTo(seconds)` for future original-relative evidence navigation and accepts a seek before metadata is available. This does not implement citations, RAG or event timelines.
+
+After the dependency update, rebuild/recreate only the frontend from the repository root:
+
+```sh
+docker compose build front
+docker compose up -d --no-deps front
+```
+
+Player integration was source-edited and formatted; no tests, typechecks, builds, playback requests or browser checks were run, following the user's instruction.
+
+The subsequent [explicit playback-preparation feature](../docs/Playback_Preparation.md) offers administrators **Prepare playback** after a format/decoding failure, displays durable queued/running/ready/failed status and supports retry. Other roles can read status and view completed copies. Network failures suggest refreshing the link instead. The player prefers a prepared H.264 MP4 when available, labeling it **Viewing MP4 copy** and retaining original metadata. No upload/error handler automatically queues work, and no AI indexing starts. Python dependency rebuild and migration 0003 are required; frontend source changes hot reload. This change was also not tested/built/run by the agent.

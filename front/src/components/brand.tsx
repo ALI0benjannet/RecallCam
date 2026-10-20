@@ -10,7 +10,7 @@ export function Brand({ light = false, compact = false }: { light?: boolean; com
         )}
       >
         <Image
-          src="/brand/recallcam-mark-v2.png"
+          src="/brand/recallcam-mark-v3.png"
           alt=""
           width={38}
           height={38}

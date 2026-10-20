@@ -4,7 +4,15 @@ from datetime import datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    computed_field,
+    field_validator,
+)
 
 from recallcam_shared.contracts.access import ROLE_PERMISSIONS, Role
 
@@ -152,6 +160,8 @@ class AuditEventRead(BaseModel):
 
     event_id: UUID
     actor_id: UUID | None
+    actor_name: str
+    resource_name: str
     action: str
     resource_type: str
     resource_id: str | None

@@ -1,6 +1,30 @@
 # RecallCam brand assets
 
-## Current identity: camera + AI (v2)
+## Current identity: expressive surveillance mascot (v3)
+
+Generated on 2026-10-20 using the built-in image-generation tool. The user supplied their Sayl logo as a style reference and asked for a surveillance identity with life and personality. That image was a visual reference only; its wording, flags, microphone and multilingual motifs were not incorporated.
+
+- `recallcam-mark-v3.png`: transparent square mascot used beside the live RecallCam wordmark.
+- `recallcam-icon-v3.png`: identical square transparent artwork used as the favicon/app-icon source. This is a direct copy of the generated mark, not a separately generated or raster-edited character.
+
+The mascot is a rounded cream surveillance-camera head on a swivel mount, with an amber camera-lens eye, cheerful winking eye and smile, and a forest-green recall swoosh. Soft dimensional shading intentionally follows the user's reference. Keep the character expressive, preserve its proportions, and pair it with live RecallCam text in the app. Use Lucide for ordinary UI controls. No application build or browser test was run for this asset replacement.
+
+### Generation prompt (v3)
+
+```text
+Use case: logo-brand.
+Asset type: a finished transparent mascot logo symbol for RecallCam, an AI video investigation app.
+Input image: STYLE REFERENCE ONLY. The supplied Sayl logo demonstrates the friendly expressive personality, rounded cream robot surfaces, deep ink face, green framing shape, confident clean shapes and gentle dimensional polish the user likes. Design an ORIGINAL RecallCam surveillance mascot rather than editing Sayl's identity.
+Primary request: give the logo life and warmth. A lovable, intelligent little surveillance-camera companion with a rounded cream-white CCTV camera head, slight curious head tilt, a dark forest-ink faceplate, expressive happy eyes and a little friendly smile. Make the surveillance-camera silhouette unmistakable through the projecting camera hood and compact swiveling camera mount beneath the head. Integrate a large camera lens into ONE eye, with a muted amber lens ring and a bright friendly glint; the other eye is a cheerful curved LED eye, creating an engaging wink. The lens is one of the eyes, never a third eye. The small swivel mount is part of the camera, not a human body. An open forest-green circular recall swoosh behind the head unifies the silhouette. Keep the mascot welcoming, observant and clever.
+Style: polished modern illustrated mascot brand mark, similar warmth and gentle volume to the reference, crisp vector-like edges, substantial simple forms, restrained soft shading within the character, beautiful negative space, professional app branding, immediately legible silhouette.
+Palette: deep forest green #163D32 and #246B54, warm cream #F6F5F0, very dark green-ink face, small muted amber #C59954 lens accent. Preserve the app's green identity.
+Composition: ONE centered compact mascot emblem, square canvas, fills about 86 percent of the square, modest even padding, fully contained. Genuinely transparent outer background.
+Constraints: no wordmark or text in this symbol (RecallCam is rendered separately in the app), no headset, microphone, flags, language bubbles, speech text, shield, police insignia, weapon, human portrait, floating accessory icons, watermark or mockup. Expressive personality and visual charm are essential; avoid a sterile diagram or generic flat outline icon.
+```
+
+## Archived identity: technical camera + AI (v2)
+
+The following v2 assets are retained as history and are no longer referenced by the frontend.
 
 Redesigned at the user's request on 2026-10-20 with the built-in imagegen tool. A recognizable CCTV camera and integrated three-node circuit motif replace the abstract return-arrow mark. The dominant forest green and amber lens/nodes preserve the application palette.
 

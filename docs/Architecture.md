@@ -36,7 +36,7 @@ VLM service and LLM service
 
 The backend and worker are separate processes. The initial repository uses `front/` for Next.js, `backend/` for FastAPI and its `query/` package, `worker/` for sequential indexing, and `shared/` for Python contracts/settings and adapter boundaries. One root Python package configuration installs the three Python namespaces together. This separation does not require a separate repository or network service for every processing stage. See [Development](Development.md) for what is implemented versus scaffolded.
 
-The development deployment now packages frontend, backend, worker and infrastructure in Compose, plus a one-shot migration service. Only VLM/LLM inference remains native/external through HTTP. The frontend proxies browser API requests to the backend service. Worker is explicitly standby until its queue consumer exists; container startup does not implement processing. See [Containers](Containers.md) for Dockerfiles, service names, source mounts and commands.
+The development deployment now packages frontend, backend, worker and infrastructure in Compose, plus a one-shot migration service. Only VLM/LLM inference remains native/external through HTTP. The frontend proxies browser API requests to the backend service. Worker now consumes explicitly requested playback conversions only; AI indexing remains unimplemented. See [Containers](Containers.md) for Dockerfiles, service names, source mounts and commands.
 
 VLM and LLM are logical service roles. They may be exposed by the same model server using distinct model identifiers, or by different services. Their deployment does not change who owns application logic or indexing orchestration.
 
@@ -71,7 +71,7 @@ Read job status
 
 Endpoint paths and response fields are implementation details to finalize through the project's shared schemas. This example does not introduce a replacement for Section 8's data contract.
 
-Authentication uses stateless expiring JWT access tokens, with no server-side authentication sessions or refresh-token records. Administrators create users and assign fixed roles. Administrator has all features; supervisor inherits operator features plus evidence export, audit and the specified Stage 2 standing queries. Operator can browse accessible footage, ask questions, view answers/evidence and submit feedback. Enforce permissions in the backend. The authentication/admin slice adds login, current-account validation, separate authentication/role middleware, administrator user and camera management, and administrative audit; see [Authentication and administration](Authentication_and_Admin.md). [PostgreSQL application design](PostgreSQL_App_Design.md) retains the broader proposed records and upload/queue UI state; upload and indexing work remain unimplemented.
+Authentication uses stateless expiring JWT access tokens, with no server-side authentication sessions or refresh-token records. Administrators create users and assign fixed roles. Administrator has all features; supervisor inherits operator features plus evidence export, audit and the specified Stage 2 standing queries. Operator can browse accessible footage, ask questions, view answers/evidence and submit feedback. Enforce permissions in the backend. The authentication/admin slice adds login, current-account validation, separate authentication/role middleware, administrator user and camera management, and administrative audit; see [Authentication and administration](Authentication_and_Admin.md). [PostgreSQL application design](PostgreSQL_App_Design.md) retains the broader proposed records and upload/queue UI state; the private upload/library slice is now implemented in [Recording library](Recording_Library.md), while AI indexing/job publication remains unimplemented. Explicit playback-preparation publication/consumption is implemented separately; see [Playback preparation](Playback_Preparation.md).
 
 ## 3. Background worker responsibilities
 
@@ -102,19 +102,21 @@ The worker resolves the authorized video metadata, storage key, and recorded pro
 
 Do not put video bytes, all image bytes, or large model outputs in Redis. Do not enqueue a separate job for every chunk in this initial design. The worker advances stages internally rather than requiring the API to enqueue each following stage.
 
-Use a Redis-backed queue library compatible with the specification's Celery/RQ options. The exact library is still an implementation choice; these documents do not silently select one. Its worker startup and execution behavior must be checked on the team's supported development platforms.
+RQ is now selected for the explicitly requested playback-preparation jobs, with JSON serialization, a PostgreSQL outbox and a single media consumer. See [Playback preparation](Playback_Preparation.md). Indexing-job persistence/consumption remains unimplemented and must preserve this document's video-job and checkpoint rules when added. Runtime behavior still needs developer verification on the supported platforms.
 
 The initial policy is ordinary queue order with one active video job. Job timeouts must accommodate real video processing, and interrupted or stale jobs must be recoverable. Redis execution state is not the sole durable record of application jobs.
 
 ## 5. Storage and consistency
 
-| Component | Responsibility |
-| --- | --- |
-| PostgreSQL | Specified metadata, tracks, events and audit data; durable video/job records and processing progress. |
-| Redis | Queue transport and execution coordination; transient queue-library state. |
+Playback compatibility preparation is a separate explicitly enqueued operation. Uploads still queue nothing. An administrator can request an H.264 MP4 viewing artifact after a browser decoding error; the worker preserves the original and never starts AI indexing as a consequence. Compose now starts the playback-only RQ consumer, rather than standby. Header presence distinguishes this mode from indexing readiness. The detailed job schema, recovery and deletion behavior are in [Playback preparation](Playback_Preparation.md).
+
+| Component       | Responsibility                                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL      | Specified metadata, tracks, events and audit data; durable video/job records and processing progress.                  |
+| Redis           | Queue transport and execution coordination; transient queue-library state.                                             |
 | Vector database | Specified visual, caption and summary vectors with metadata filters; Qdrant is the specification's recommended choice. |
-| Lexical index | BM25 representation of captions, as specified. |
-| Object storage | Original videos, selected frames, derived clips and other file artifacts. |
+| Lexical index   | BM25 representation of captions, as specified.                                                                         |
+| Object storage  | Original videos, selected frames, derived clips and other file artifacts.                                              |
 
 Use a storage interface so a local development directory and a shared object-storage service can implement the same operations. A local directory is a development adapter; it does not remove the object-storage architecture in the specification. The exact production service remains to be chosen.
 

@@ -22,6 +22,17 @@ x-python-service: &python-service
     S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?Set S3_SECRET_ACCESS_KEY in .env}
     S3_BUCKET: ${S3_BUCKET:-recallcam}
     S3_REGION: ${S3_REGION:-us-east-1}
+    S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
+    MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-300}
+    UPLOAD_MAX_BYTES: ${UPLOAD_MAX_BYTES:-10737418240}
+    UPLOAD_TIMEOUT_SECONDS: ${UPLOAD_TIMEOUT_SECONDS:-3600}
+    MEDIA_PROBE_TIMEOUT_SECONDS: ${MEDIA_PROBE_TIMEOUT_SECONDS:-30}
+    MEDIA_PREVIEW_TIMEOUT_SECONDS: ${MEDIA_PREVIEW_TIMEOUT_SECONDS:-20}
+    PLAYBACK_CONVERSION_TIMEOUT_SECONDS: ${PLAYBACK_CONVERSION_TIMEOUT_SECONDS:-7200}
+    PLAYBACK_CONVERSION_THREADS: ${PLAYBACK_CONVERSION_THREADS:-2}
+    PLAYBACK_CONVERSION_MAX_BYTES: ${PLAYBACK_CONVERSION_MAX_BYTES:-21474836480}
+    FFPROBE_BINARY: ${FFPROBE_BINARY:-ffprobe}
+    FFMPEG_BINARY: ${FFMPEG_BINARY:-ffmpeg}
     DATA_DIR: /app/data
     CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}'
     JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?Set a private JWT_SIGNING_KEY in .env}
@@ -99,8 +110,8 @@ services:
 
   worker:
     <<: *python-service
-    # Replace standby with the real consumer once durable queue processing is implemented.
-    command: ["python", "-m", "recallcam_worker", "--standby"]
+    # Explicit playback conversion only. AI indexing remains unimplemented.
+    command: ["python", "-m", "recallcam_worker", "--media"]
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -127,6 +138,7 @@ services:
       # These are frontend-only values; Python/model credentials never enter this service.
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
+      BACKEND_PROXY_TIMEOUT_SECONDS: ${BACKEND_PROXY_TIMEOUT_SECONDS:-3600}
       WATCHPACK_POLLING: ${FRONT_WATCH_POLLING:-false}
     ports:
       - "${COMPOSE_BIND_ADDRESS:-127.0.0.1}:${FRONT_PORT:-3000}:3000"
