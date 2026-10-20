@@ -34,7 +34,7 @@ VLM service and LLM service
     Model weights and inference remain outside FastAPI and worker processes
 ```
 
-The backend and worker are separate processes. They can share one repository, domain modules, schemas, storage clients, and HTTP inference adapters. This separation does not require a separate repository or network service for every processing stage.
+The backend and worker are separate processes. The initial repository uses `front/` for Next.js, `backend/` for FastAPI and its `query/` package, `worker/` for sequential indexing, and `shared/` for Python contracts/settings and adapter boundaries. One root Python package configuration installs the three Python namespaces together. This separation does not require a separate repository or network service for every processing stage. See [Development](Development.md) for what is implemented versus scaffolded.
 
 VLM and LLM are logical service roles. They may be exposed by the same model server using distinct model identifiers, or by different services. Their deployment does not change who owns application logic or indexing orchestration.
 
@@ -111,6 +111,8 @@ The initial policy is ordinary queue order with one active video job. Job timeou
 
 Use a storage interface so a local development directory and a shared object-storage service can implement the same operations. A local directory is a development adapter; it does not remove the object-storage architecture in the specification. The exact production service remains to be chosen.
 
+The initial Compose deployment selects SILO as S3-compatible object storage, with a persistent volume and one-shot private bucket initialization. This deployment choice follows the MinIO community repository's archival; the specification's original wording remains unchanged. Application settings use `S3_*` names, while SILO retains `MINIO_*` server compatibility variables. See the [SILO installation guide](https://silo.pgsty.com/download/) and [MinIO repository status](https://github.com/minio/minio).
+
 Persist a stable object key such as `videos/video-456/source.mp4`, not a developer's absolute home-directory path. If API and worker use a local filesystem, they need access to the same configured data. On different hosts, use storage both can reach; changing the model URL does not make local files shared automatically.
 
 Database writes and queue publishing are separate operations. Handle failures between them: a durable job must be discoverable and re-enqueueable if publishing fails. The concrete mechanism can be an outbox or reconciliation process; do not treat the pair as an atomic cross-system transaction.
@@ -175,7 +177,7 @@ EMBEDDING_DEVICE=auto
 INDEXING_CONCURRENCY=1
 ```
 
-These variable names are proposed configuration keys, not implemented settings. Timeout values are examples to tune, not performance targets. `auto` requires an explicit, tested device-selection policy and an override; it is not a reason to silently run unsupported acceleration.
+The example above illustrates the configuration categories. The current implemented settings and SILO/S3 values are defined in the root `.env.example` and `shared/src/recallcam_shared/settings.py`; consult those files for the full deployment configuration. Timeout values are examples to tune, not performance targets. `auto` is currently a configured preference, not implemented device detection; future processing needs an explicit, tested selection policy and an override.
 
 Document URL conventions in each adapter. For example, the native LM Studio adapter can append `/api/v1/chat` to the illustrated VLM base URL, while an OpenAI-compatible chat adapter appends `/chat/completions` to a base URL ending in `/v1`. Avoid duplicating path segments or assuming a fixed port.
 
@@ -201,4 +203,4 @@ Use recorded fixtures and mock HTTP model responses for application integration 
 
 Infrastructure services can use a shared deployment configuration such as Docker Compose, while model services and accelerated worker components run through whichever supported deployment suits the environment. Do not require all team members to use the same accelerator or assume a Linux container exposes every host's GPU identically.
 
-These are architecture documents only. They do not add a new team allocation, hardware target, model-selection mandate, or reduced version of the cahier des charges. The intended result is one application architecture with configurable deployments and a sequential background indexing implementation.
+The initial scaffold realizes these folder/service boundaries without implementing the full product. It does not add a team allocation, hardware target, model-selection mandate, or reduced version of the cahier des charges. The intended result remains one application architecture with configurable deployments and a sequential background indexing implementation.

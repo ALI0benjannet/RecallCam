@@ -1,0 +1,15 @@
+# Initial processing choices; these are not yet loaded by the TODO stage handlers.
+schema_version: "1.0"
+cv_fps: 5
+chunking:
+  baseline_seconds: 10
+  overlap_seconds: 2
+  candidate_keyframe_interval_seconds: 2
+selection:
+  activity_aware: true
+  remove_redundant_vlm_frames: true
+  # Similarity/activity thresholds and fallback intervals need evaluation.
+execution:
+  video_jobs: 1
+  model_stages: 1
+  vlm_requests: 1

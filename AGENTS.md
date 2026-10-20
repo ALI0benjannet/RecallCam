@@ -52,7 +52,8 @@ Prepare video and timeline
 
 ## Development and verification
 
-- Inspect the current repository before changing it. At initial setup it contains only Markdown documentation and instructions, not an implemented application; do not assume scaffolding or runnable commands exist. Update this note when that changes.
+- Inspect the current repository before changing it. The initial scaffold has `front/`, `backend/` (including `query/`), `worker/`, and `shared/`. Read [README](README.md) and [Development](docs/Development.md) for exact setup/check commands and implementation status. Stage TODOs, queue consumption, durable persistence, and RAG remain unimplemented; do not claim the scaffold processes videos.
+- Compose runs PostgreSQL, Redis, Qdrant, and SILO S3-compatible storage with persistent volumes. VLM/LLM services remain external HTTP endpoints. Keep application storage settings provider-neutral; the source specification is not rewritten to rename its recommended products.
 - Keep changes focused and reviewable. Do not overwrite unrelated teammate work. Preserve the source specification; document implementation choices separately.
 - When scaffolding, document actual install, service-start, worker-start, lint, format, and test commands in a README and keep dependency/lock files consistent. Follow the specification's Python/tooling guidance.
 - Use fixtures and mocked HTTP responses for integration work without model hardware. Keep real inference checks separate; never report fixture or repeated-image cache results as independent model benchmarks.
