@@ -107,7 +107,7 @@ Use the shared shadcn/ui primitives in `front/src/components/ui/` for buttons, f
 
 Shared composition classes include `panel`, `panel-header`, `panel-title`, `panel-description`, `table-shell`, `list-toolbar`, `entity-icon`, `status-pill`, `status-pill-active` and `subtle-link`. Use `PageHeading`, `EmptyState`, `LoadError`, `LoadingRows` and `Pagination` for consistent states. Standard buttons/inputs are 40px high; the sign-in form uses 48px controls. Dialog content scrolls within the viewport.
 
-One global Sonner toaster covers every route, including login. Notify after confirmed mutations and request failures. Preserve inline field errors and input values after failure. Prevent duplicate submissions, confirm account deactivation/camera archival, and avoid repeated expired-token notifications. Successful background list loads need no toast.
+One global Sonner toaster covers every route, including login, positioned at the top-right. Keep this position consistent across the app. Notify after confirmed mutations and request failures. Preserve inline field errors and input values after failure. Prevent duplicate submissions, confirm account deactivation/camera archival, and avoid repeated expired-token notifications. Successful background list loads need no toast.
 
 Every data view needs populated, loading, empty and error-with-retry states. A failed request is not an empty collection. Count badges disappear while loading or failed rather than showing stale totals. An unchecked connection is not healthy. Placeholder controls must never simulate answers or uploads.
 

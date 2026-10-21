@@ -25,7 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
-        <Toaster position="bottom-right" closeButton richColors duration={5000} />
+        <Toaster position="top-right" closeButton richColors duration={5000} />
       </body>
     </html>
   );
