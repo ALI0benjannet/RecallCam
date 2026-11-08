@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     playback_conversion_timeout_seconds: int = Field(default=7200, ge=60, le=86400)
     playback_conversion_threads: int = Field(default=2, ge=1, le=16)
     playback_conversion_max_bytes: int = Field(default=20 * 1024**3, ge=1024**2, le=200 * 1024**3)
+    retention_sweep_interval_seconds: int = Field(default=60, ge=15, le=86400)
     ffprobe_binary: str = "ffprobe"
     ffmpeg_binary: str = "ffmpeg"
     data_dir: Path = Path("data")

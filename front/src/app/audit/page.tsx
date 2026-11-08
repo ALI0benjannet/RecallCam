@@ -152,6 +152,11 @@ export default function AuditPage() {
                             {item.action.replace(/[._]/g, " ")}
                           </p>
                           <p className="mt-1 text-[10px] text-muted-foreground">{item.action}</p>
+                          {item.details.reason === "retention" && (
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Recording retention
+                            </p>
+                          )}
                         </div>
                       </div>
                     </TableCell>

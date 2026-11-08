@@ -12,6 +12,8 @@ Compose now starts `python -m recallcam_worker --media`: one RQ SpawnWorker cons
 
 Optional `--standby` retains the diagnostic presence-only mode and consumes nothing. Media mode emits a presence heartbeat every five seconds (30-second TTL), separately from job work. The header identifies it as Playback, never indexing readiness.
 
+Media mode also runs [recording retention](../docs/Recording_Retention.md) in a separate worker loop. Migration 0004 seeds the policy disabled. FastAPI only handles policy settings and previews. Set `RETENTION_SWEEP_INTERVAL_SECONDS` in Compose to change the sweep interval; standby does not run sweeps.
+
 The worker uses the shared Python image, mounted source/configs, infrastructure service URLs, shared scratch/cache volumes and native HTTP model URLs. Restart it after changing imported code. Linux containers on Mac do not expose MPS; CV/embedding device choices must reflect container capabilities. Only LLM/VLM serving stays native.
 
 When indexing is implemented, retain one job per video, one active execution, persistent stage/batch checkpoints and shared contracts. Media conversion uses originals as inputs and creates a separate private H.264 viewing artifact; it does not invoke the seven-stage runner or any model. See [Containers](../docs/Containers.md).

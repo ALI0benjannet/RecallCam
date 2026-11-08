@@ -13,7 +13,17 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from recallcam_backend.middleware import AuthenticationMiddleware, RoleMiddleware
-from recallcam_backend.routes import audit, auth, cameras, health, queries, services, users, videos
+from recallcam_backend.routes import (
+    audit,
+    auth,
+    cameras,
+    health,
+    queries,
+    retention,
+    services,
+    users,
+    videos,
+)
 from recallcam_backend.security import TokenService, hash_password
 from recallcam_shared.media import InvalidMedia, MediaToolUnavailable
 from recallcam_shared.database.connection import create_database_engine, create_session_factory
@@ -70,6 +80,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         cameras.router,
         videos.router,
         audit.router,
+        retention.router,
         services.router,
         queries.router,
     ):

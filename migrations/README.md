@@ -18,4 +18,6 @@ Migration `0003_playback_preparation` adds durable `media_jobs` for explicitly r
 
 Camera lines/zones, indexing jobs/checkpoints/outbox, pipeline records and online-query tables require later migrations. Their proposed design remains in [PostgreSQL application design](../docs/PostgreSQL_App_Design.md).
 
+Migration `0004_recording_retention` seeds a disabled global retention policy and adds durable retention deletion markers and selection indexes. It deletes no recordings on upgrade. Downgrading removes the policy and markers; finish pending retention deletions first. See [Recording retention](../docs/Recording_Retention.md).
+
 The initial migration was applied natively to the local PostgreSQL database on 2026-10-20 as setup. Compose retains the existing database volume and upgrades fresh environments through its migration service. The containerized migration was not built/launched/tested at the user's request; the earlier native result does not verify this image or network path.

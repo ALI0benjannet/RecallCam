@@ -45,6 +45,8 @@ An upload claim has an attempt ID and expiring lease. Concurrent active uploads 
 
 Cancellation, ordinary errors and retries retain an administrator-visible entry. Deletion invalidates an incomplete upload and first persists `deleting`, then removes all objects under the video's prefix and deletes metadata/artifact rows. Finalization uses the same row lock: deletion either waits for the storage transfer or prevents it from starting. Storage failure retains a hidden-from-viewers, retryable deleting entry; database cascades do not substitute for object deletion. Minimal administrative audit identifiers remain; footage, descriptions and signed URLs are never copied into audit payloads. Removed resources display descriptive fallback names rather than UUIDs.
 
+[Recording retention](Recording_Retention.md) uses the same deletion path for ready recordings under an administrator-enabled policy. FastAPI serves policy and preview requests; automatic claims, deletion and retries run in the worker.
+
 A process killed without cleanup can leave scratch files or incomplete S3 multipart transfers. Operational cleanup/lifecycle policy is still required; do not claim crash-proof resumable byte uploads. Retry resends the file, not a partial byte range. Once indexing is implemented, deletion must also coordinate active jobs and all derived vector/lexical/pipeline representations before the route can delete indexed recordings. No such representations are created here.
 
 ## API

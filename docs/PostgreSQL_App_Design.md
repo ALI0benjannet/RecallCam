@@ -110,6 +110,8 @@ Read status through backend endpoints backed by PostgreSQL. Periodic polling is 
 
 ## 5. Persistence boundaries and deletion
 
+Migration `0004_recording_retention` adds the global opt-in policy and durable retention deletion markers. See [Recording retention](Recording_Retention.md) for the current recording-only implementation, request/worker boundary and concurrency rules.
+
 PostgreSQL stores application records and required pipeline metadata/text. Object storage holds original videos and derived files. Qdrant and the lexical index hold retrieval representations; Redis holds queue transport state. Store stable object keys and identifiers, not local machine paths, large binary payloads or expiring signed URLs in durable references.
 
 Video deletion must coordinate PostgreSQL records, object artifacts, vector/lexical representations and in-flight jobs. Retention and deletion requirements remain those of P6 and Section 10. Database cascades alone cannot delete external artifacts; audit retention must avoid retaining deleted footage or derived sensitive content in audit payloads.

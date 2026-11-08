@@ -34,7 +34,7 @@ def service_status(request: Request, response: Response) -> dict:
                 worker = {
                     "connected": True,
                     "mode": "media",
-                    "message": "Worker connected for explicitly queued playback preparation. AI indexing is unavailable.",
+                    "message": "Worker connected for playback preparation and recording retention. AI indexing is unavailable.",
                 }
     except (RedisError, ValueError, AttributeError):
         worker["message"] = "Worker presence cannot be checked: heartbeat storage is unavailable."

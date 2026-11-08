@@ -2,14 +2,14 @@
 
 Video search and investigation with timestamped evidence. Docker Compose runs the frontend, backend, worker and infrastructure. Only LLM/VLM inference servers run natively or at another configured HTTP endpoint.
 
-The application currently implements login, fixed-role permissions, administrator-created accounts, camera metadata, private recording uploads/library/playback and administrative audit with readable names. Indexing and RAG remain future work. The worker consumes explicitly requested playback-preparation jobs through RQ; it does not run AI indexing. Uploads still enqueue nothing.
+The application currently implements login, fixed-role permissions, administrator-created accounts, camera metadata, private recording uploads/library/playback, opt-in retention and administrative audit with readable names. The worker consumes explicit playback-preparation jobs through RQ and runs retention sweeps. Indexing and RAG remain future work. Uploads still enqueue nothing.
 
 ## Project structure
 
 ```text
 front/       Next.js, TypeScript, Tailwind/shadcn UI, frontend Dockerfile
 backend/     FastAPI application and query/RAG modules
-worker/      Playback conversion consumer, sequential AI runner and stage TODOs
+worker/      Playback conversion, retention sweep, sequential AI runner and stage TODOs
 shared/      Shared Python settings, contracts and database adapters
 configs/     Versioned processing policy and prompt location
 migrations/  Alembic application database migrations
@@ -119,4 +119,6 @@ The supplemental documents and container packaging do not reduce the specificati
 
 The recording-library/status change adds migration 0002 and locked boto3/Redis dependencies. FFmpeg/FFprobe are provided by the Python image. The header shows live API/worker presence; a connected standby worker does not process videos. [Library implementation and limitations](docs/Recording_Library.md). This slice was not built or functionally tested; the user performs verification.
 
-The later [explicit playback preparation](docs/Playback_Preparation.md) adds migration 0003 and the locked RQ dependency. A decoding error offers administrators Prepare playback; the worker creates a private H.264 MP4 viewing artifact while retaining the original. Uploads never enqueue conversion or indexing automatically. Compose now uses `--media` for playback-only jobs; AI indexing remains unavailable. Rebuild with `docker compose build backend`, apply with `docker compose run --rm migrate`, then recreate with `docker compose up -d --force-recreate backend worker`. Source/lock updates were not built, migrated, converted or tested by the agent, per user instruction.
+The later [explicit playback preparation](docs/Playback_Preparation.md) adds migration 0003 and the locked RQ dependency. A decoding error offers administrators Prepare playback; the worker creates a private H.264 MP4 viewing artifact while retaining the original. Uploads never enqueue conversion or indexing automatically. Rebuild the shared Python image when adding these dependencies.
+
+[Recording retention](docs/Recording_Retention.md) adds migration 0004, a read-only expiry preview and worker-only automatic deletion. The policy is off by default. Apply with `docker compose run --rm migrate`, then recreate with `docker compose up -d --force-recreate backend worker`. AI indexing remains unavailable.

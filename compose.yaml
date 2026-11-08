@@ -11,7 +11,7 @@ x-python-service: &python-service
   init: true
   extra_hosts:
     - "host.docker.internal:host-gateway"
-  environment:
+  environment: &python-environment
     DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
     REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
@@ -110,8 +110,11 @@ services:
 
   worker:
     <<: *python-service
-    # Explicit playback conversion only. AI indexing remains unimplemented.
+    # Explicit playback conversion and periodic opt-in retention.
     command: ["python", "-m", "recallcam_worker", "--media"]
+    environment:
+      <<: *python-environment
+      RETENTION_SWEEP_INTERVAL_SECONDS: ${RETENTION_SWEEP_INTERVAL_SECONDS:-60}
     depends_on:
       migrate:
         condition: service_completed_successfully

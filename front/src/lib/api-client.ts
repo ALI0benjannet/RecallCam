@@ -10,6 +10,8 @@ import type {
   Playback,
   PlaybackPreparation,
   ServiceStatus,
+  RetentionPolicy,
+  RetentionPreview,
 } from "./types";
 // Empty means same-origin requests through Next.js, including inside Compose.
 const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
@@ -83,6 +85,15 @@ export type CameraInput = {
   timezone: string;
 };
 export const api = {
+  retentionPolicy: (signal?: AbortSignal) => request<RetentionPolicy>("/api/retention", { signal }),
+  retentionPreview: (days: number, page: number) =>
+    request<RetentionPreview>(`/api/retention/preview?retention_days=${days}&page=${page}`),
+  updateRetentionPolicy: (body: {
+    enabled: boolean;
+    retention_days: number;
+    expected_revision: number;
+    confirm_deletion: boolean;
+  }) => request<RetentionPolicy>("/api/retention", { method: "PUT", body: JSON.stringify(body) }),
   services: (signal?: AbortSignal) => request<ServiceStatus>("/api/services/status", { signal }),
   uploadPolicy: () => request<UploadPolicy>("/api/videos/upload-policy"),
   videos: (params: URLSearchParams) => request<Page<Video>>(`/api/videos?${params}`),

@@ -19,6 +19,8 @@ The next application slice adds login/JWT signing and validation, separate authe
 
 The [recording-library slice](Recording_Library.md) now adds uploads/library/playback, videos/artifacts migration 0002, audit names and header backend/worker presence. [Playback preparation](Playback_Preparation.md) adds migration 0003, explicit administrator conversion requests, a playback-only RQ consumer and durable outbox/recovery.
 
+[Recording retention](Recording_Retention.md) adds migration 0004, administrator policy/preview endpoints and a worker-only sweep. Automatic deletion defaults to off; verification is manual.
+
 Not yet implemented: line/zone camera configuration, indexing-job database migrations, indexing queue consumption/claims/checkpoints, AI processing stages, HTTP model adapters, retrieval/grounding, LangChain/tool loops, query-purpose/returned-clip audit and evidence/citation checks. Placeholder pages and TODO handlers must not be represented as working product features.
 
 ## Sources of requirements and choices

@@ -1,4 +1,4 @@
-"""Run explicit playback preparation, or inspect the unimplemented indexing stages."""
+"""Run media maintenance, or inspect the unimplemented indexing stages."""
 
 import argparse
 import json
@@ -25,7 +25,7 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--show-pipeline", action="store_true", help="Print stage execution order")
     mode.add_argument(
-        "--media", action="store_true", help="Consume explicitly requested playback conversions"
+        "--media", action="store_true", help="Run playback preparation and opt-in retention"
     )
     mode.add_argument(
         "--standby",
@@ -82,7 +82,7 @@ def main() -> None:
         return
     parser.exit(
         2,
-        "Choose --media for explicit playback preparation, --standby for presence only, "
+        "Choose --media for playback preparation and retention, --standby for presence only, "
         "or --show-pipeline to inspect the unimplemented AI stage skeleton.\n",
     )
 

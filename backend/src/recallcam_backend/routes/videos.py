@@ -40,6 +40,7 @@ from recallcam_shared.contracts.videos import (
     VideoUpdate,
 )
 from recallcam_shared.database.models import Artifact, Camera, Video
+from recallcam_shared.recording_deletion import mark_for_deletion, purge_marked_recording
 from recallcam_shared.storage.s3 import S3Storage, StorageUnavailable
 
 router = APIRouter(prefix="/videos", tags=["recordings"])
@@ -381,25 +382,9 @@ def delete_video(
     video = visible_video(session, video_id, current, lock=True)
     # Invalidates an incomplete attempt immediately. Final storage writes use the same row
     # lock, so deletion waits for an ongoing finalization or prevents it from starting.
-    video.upload_state = "deleting"
-    record_audit(
-        session,
-        actor_id=current.user_id,
-        action="video.deletion_requested",
-        resource_type="video",
-        resource_id=video_id,
-    )
+    mark_for_deletion(session, video, actor_id=current.user_id)
     session.commit()
     # Reacquire the lock after persisting intent. Storage failure leaves a retryable deleting row.
-    video = visible_video(session, video_id, current, lock=True)
-    store.delete_prefix(video.source_bucket, f"videos/{video_id}/")
-    session.delete(video)
-    record_audit(
-        session,
-        actor_id=current.user_id,
-        action="video.deleted",
-        resource_type="video",
-        resource_id=video_id,
-    )
+    purge_marked_recording(session, store, video_id, actor_id=current.user_id)
     session.commit()
     return Response(status_code=204)

@@ -138,6 +138,20 @@ class Video(VersionedRecord, TimestampedRecord, Base):
         ),
         Index("ix_videos_camera_recording_start", "camera_id", "recording_start"),
         Index("ix_videos_upload_state_created_at", "upload_state", "created_at"),
+        Index(
+            "ix_videos_retention_ready",
+            "recording_end",
+            "video_id",
+            postgresql_where=text("upload_state = 'ready'"),
+        ),
+        Index(
+            "ix_videos_retention_pending",
+            "updated_at",
+            "video_id",
+            postgresql_where=text(
+                "upload_state = 'deleting' AND retention_policy_revision IS NOT NULL"
+            ),
+        ),
     )
     video_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     camera_id: Mapped[UUID] = mapped_column(
@@ -166,6 +180,7 @@ class Video(VersionedRecord, TimestampedRecord, Base):
     )
     upload_attempt_id: Mapped[UUID | None] = mapped_column(Uuid)
     upload_lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retention_policy_revision: Mapped[int | None] = mapped_column(Integer)
     recording_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     recording_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recording_timezone: Mapped[str] = mapped_column(String(100))
@@ -235,3 +250,19 @@ class MediaJob(VersionedRecord, TimestampedRecord, Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(String(300))
+
+
+class RetentionPolicy(VersionedRecord, TimestampedRecord, Base):
+    """One global policy; migration seeds it with enforcement disabled."""
+
+    __tablename__ = "retention_policy"
+    __table_args__ = (
+        CheckConstraint("id = 1", name="singleton"),
+        CheckConstraint("retention_days BETWEEN 1 AND 3650", name="retention_days_range"),
+        CheckConstraint("revision >= 1", name="revision_positive"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    retention_days: Mapped[int] = mapped_column(Integer, server_default="30")
+    revision: Mapped[int] = mapped_column(Integer, server_default="1")

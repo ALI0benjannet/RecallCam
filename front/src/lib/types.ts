@@ -123,3 +123,26 @@ export type ServiceStatus = {
   backend: { connected: boolean; message: string };
   worker: { connected: boolean; mode: string; message: string };
 };
+
+export type RetentionPolicy = {
+  schema_version: string;
+  producer_version: string;
+  enabled: boolean;
+  retention_days: number;
+  revision: number;
+  updated_at: string;
+};
+
+export type RetentionCandidate = {
+  video_id: string;
+  title: string;
+  camera_name: string;
+  recording_end: string;
+};
+
+export type RetentionPreview = Page<RetentionCandidate> & {
+  schema_version: string;
+  producer_version: string;
+  cutoff: string;
+  retention_days: number;
+};

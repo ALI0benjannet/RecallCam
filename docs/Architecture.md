@@ -36,7 +36,7 @@ VLM service and LLM service
 
 The backend and worker are separate processes. The initial repository uses `front/` for Next.js, `backend/` for FastAPI and its `query/` package, `worker/` for sequential indexing, and `shared/` for Python contracts/settings and adapter boundaries. One root Python package configuration installs the three Python namespaces together. This separation does not require a separate repository or network service for every processing stage. See [Development](Development.md) for what is implemented versus scaffolded.
 
-The development deployment now packages frontend, backend, worker and infrastructure in Compose, plus a one-shot migration service. Only VLM/LLM inference remains native/external through HTTP. The frontend proxies browser API requests to the backend service. Worker now consumes explicitly requested playback conversions only; AI indexing remains unimplemented. See [Containers](Containers.md) for Dockerfiles, service names, source mounts and commands.
+The development deployment now packages frontend, backend, worker and infrastructure in Compose, plus a one-shot migration service. Only VLM/LLM inference remains native/external through HTTP. The frontend proxies browser API requests to the backend service. The worker consumes explicitly requested playback conversions and runs opt-in recording retention; AI indexing remains unimplemented. See [Containers](Containers.md) for Dockerfiles, service names, source mounts and commands.
 
 VLM and LLM are logical service roles. They may be exposed by the same model server using distinct model identifiers, or by different services. Their deployment does not change who owns application logic or indexing orchestration.
 
@@ -74,6 +74,8 @@ Endpoint paths and response fields are implementation details to finalize throug
 Authentication uses stateless expiring JWT access tokens, with no server-side authentication sessions or refresh-token records. Administrators create users and assign fixed roles. Administrator has all features; supervisor inherits operator features plus evidence export, audit and the specified Stage 2 standing queries. Operator can browse accessible footage, ask questions, view answers/evidence and submit feedback. Enforce permissions in the backend. The authentication/admin slice adds login, current-account validation, separate authentication/role middleware, administrator user and camera management, and administrative audit; see [Authentication and administration](Authentication_and_Admin.md). [PostgreSQL application design](PostgreSQL_App_Design.md) retains the broader proposed records and upload/queue UI state; the private upload/library slice is now implemented in [Recording library](Recording_Library.md), while AI indexing/job publication remains unimplemented. Explicit playback-preparation publication/consumption is implemented separately; see [Playback preparation](Playback_Preparation.md).
 
 ## 3. Background worker responsibilities
+
+All background and scheduled work runs in the worker, including [recording retention](Recording_Retention.md). FastAPI handles requests and responses; retention endpoints save policy or preview candidates without scheduling or running deletion.
 
 The worker owns all background indexing orchestration for a video: preparation, frame sampling, CV, activity/redundancy selection, visual embeddings, caption requests, summary requests, text embeddings, and index finalization.
 

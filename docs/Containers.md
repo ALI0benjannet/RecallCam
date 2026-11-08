@@ -6,7 +6,7 @@
 
 CV/tracking and embeddings belong to worker/application code as those stages are implemented. Their actual model dependencies and inference are not implemented yet. Container packaging does not implement those stages.
 
-The worker starts with `--media`: one RQ SpawnWorker for explicitly requested playback conversion, backed by durable PostgreSQL media jobs and outbox recovery. It does not run AI indexing. The header identifies media presence as Playback, with a 30-second TTL. Optional `--standby` consumes nothing; `--show-pipeline` prints the unimplemented AI stage order. See [Playback preparation](Playback_Preparation.md) for migration 0003, limits, recovery and deletion behavior.
+The worker starts with `--media`: one RQ SpawnWorker for explicitly requested playback conversion, backed by durable PostgreSQL media jobs and outbox recovery, plus the worker-only [retention sweep](Recording_Retention.md). It does not run AI indexing. The header identifies media presence as Playback, with a 30-second TTL. Optional `--standby` runs neither conversions nor retention; `--show-pipeline` prints the unimplemented AI stage order. See [Playback preparation](Playback_Preparation.md) for migration 0003 and conversion recovery. Retention needs migration 0004 and uses the worker-only `RETENTION_SWEEP_INTERVAL_SECONDS` setting.
 
 ## Configuration and network addresses
 

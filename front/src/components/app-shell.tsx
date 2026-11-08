@@ -45,6 +45,13 @@ const links = [
     group: "Management",
   },
   {
+    href: "/retention",
+    label: "Recording retention",
+    icon: Settings2,
+    permission: "retention:manage",
+    group: "Management",
+  },
+  {
     href: "/audit",
     label: "Audit log",
     icon: FileClock,
@@ -93,19 +100,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
     );
   if (!user) return null;
-  const required = pathname.startsWith("/admin")
-    ? "users:manage"
-    : pathname.startsWith("/audit")
-      ? "audit:read"
-      : pathname.startsWith("/upload")
-        ? "videos:manage"
-        : null;
+  const activeLink = links.find(
+    (link) => link.href === pathname || (link.href !== "/" && pathname.startsWith(`${link.href}/`)),
+  );
+  const required =
+    activeLink?.permission ?? (pathname.startsWith("/admin") ? "users:manage" : null);
   const forbidden = required && !user.permissions.includes(required);
-  const current =
-    links.find(
-      (link) =>
-        link.href === pathname || (link.href !== "/" && pathname.startsWith(`${link.href}/`)),
-    )?.label ?? (pathname === "/account" ? "Your account" : "Workspace");
+  const current = activeLink?.label ?? (pathname === "/account" ? "Your account" : "Workspace");
   const sidebar = (
     <>
       <Link href="/" aria-label="RecallCam overview" className="mb-9 block px-3">

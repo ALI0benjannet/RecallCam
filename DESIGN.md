@@ -109,6 +109,8 @@ Shared composition classes include `panel`, `panel-header`, `panel-title`, `pane
 
 One global Sonner toaster covers every route, including login, positioned at the top-right. Keep this position consistent across the app. Notify after confirmed mutations and request failures. Preserve inline field errors and input values after failure. Prevent duplicate submissions, confirm account deactivation/camera archival, and avoid repeated expired-token notifications. Successful background list loads need no toast.
 
+Recording retention belongs in Management and is visible only to administrators. Keep the saved on/off badge distinct from form edits. The read-only expiry preview shows the cutoff and affected recordings. Before enabling deletion or shortening an active period, show an explicit destructive confirmation with the current preview count.
+
 Every data view needs populated, loading, empty and error-with-retry states. A failed request is not an empty collection. Count badges disappear while loading or failed rather than showing stale totals. An unchecked connection is not healthy. Placeholder controls must never simulate answers or uploads.
 
 Preserve visible focus, meaningful labels, dialog titles, accessible icon actions, keyboard dismissal and reduced-motion behavior. Keep the skip-to-content link. Permission-aware navigation and direct-route views support backend enforcement; they never replace it.

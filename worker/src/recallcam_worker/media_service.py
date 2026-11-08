@@ -23,6 +23,7 @@ from recallcam_shared.media_queue import (
 )
 from recallcam_shared.monitoring import WORKER_HEARTBEAT_KEY, WORKER_HEARTBEAT_TTL
 from recallcam_shared.settings import Settings
+from recallcam_worker.retention import run_retention
 
 
 def reconcile(engine, factory, queue) -> None:
@@ -100,7 +101,11 @@ def run_media_worker(settings: Settings) -> None:
                 pass
 
     thread = Thread(target=maintain, name="media-outbox", daemon=True)
+    retention = Thread(
+        target=run_retention, args=(factory, settings, stopped), name="retention-sweep", daemon=True
+    )
     thread.start()
+    retention.start()
     try:
         with redis_connection(settings) as client:
             worker = SpawnWorker(
@@ -110,10 +115,12 @@ def run_media_worker(settings: Settings) -> None:
                 name=f"recallcam-media-{identity}",
             )
             logging.warning(
-                "Media worker active: explicit playback preparation only. AI indexing is unavailable."
+                "Media worker active: explicit playback preparation and opt-in retention. "
+                "AI indexing is unavailable."
             )
             worker.work(logging_level="WARNING")
     finally:
         stopped.set()
         thread.join(timeout=15)
+        retention.join(timeout=15)
         engine.dispose()

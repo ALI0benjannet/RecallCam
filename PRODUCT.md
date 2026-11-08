@@ -20,13 +20,15 @@ Administrators create user accounts. Login issues a signed expiring JWT; there a
 
 The team develops on different platforms. Service URLs, model names, credentials and processing device choices are configured, not hard-coded. FastAPI serves application and query logic; a separate worker indexes videos; VLM/LLM inference uses external HTTP services.
 
-Frontend, backend, worker and infrastructure are packaged in Docker Compose. Only LLM/VLM serving stays native/outside Docker. The worker currently consumes explicitly requested playback-preparation jobs only; AI indexing is still unavailable.
+Frontend, backend, worker and infrastructure are packaged in Docker Compose. Only LLM/VLM serving stays native/outside Docker. The worker consumes explicitly requested playback-preparation jobs and runs opt-in recording retention; AI indexing is still unavailable.
 
 ## Capabilities and Constraints
 
 The authoritative requirements cover multilingual English/French/Arabic questions, cited answers, counting from structured events, retention/deletion, access controls and audit, activity-based indexing and resumable processing. Full details live in the specification and supplemental architecture documents; this context does not reduce their scope.
 
 The current implementation slice is authentication, administrator-created accounts, camera metadata management, private recording uploads/library/playback, explicitly enqueued browser compatibility copies and administrative audit. An administrator can request conversion after a decoding error; uploads queue nothing. Original footage is preserved. Indexing and investigation answers remain visibly unavailable. Worker presence identifies playback preparation rather than AI readiness. No invented footage, metrics, job progress or working search results belong in the interface.
+
+Administrators can configure recording retention and preview expired recordings. Automatic deletion is off by default; the worker enforces an explicitly enabled policy and audits deletions.
 
 ## Brand Commitments
 
