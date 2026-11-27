@@ -105,6 +105,7 @@ At the user's request, this containerization change was not built, started or te
 ## Read before implementation
 
 - [Agent instructions](AGENTS.md)
+- [Team work split, ownership and starting dependencies](docs/Team_Work_Split.md)
 - [Cahier des charges](docs/RecallCam_Cahier_des_Charges.md)
 - [Architecture](docs/Architecture.md)
 - [Sequential pipeline](docs/Sequential_Pipeline.md)

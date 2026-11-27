@@ -2,6 +2,14 @@
 
 RecallCam is a video search and investigation platform with timestamped evidence. Work from the repository documents, not assumptions from a previous chat.
 
+## Team identity and task readiness
+
+- Read [Team work split](docs/Team_Work_Split.md) when starting work. It assigns processing and retrieval tasks, stable task IDs, handoffs and initial dependencies.
+- At the start of a new chat, if the user's identity is unknown, ask which member is working: Mohamed Elgheith, Ali, Gheith Mahmoud, Boutheina or Ons. Clarify an ambiguous "Gheith"; Mohamed Elgheith and Gheith Mahmoud are different members. Reuse identity explicitly established in the current chat. Do not infer it from the operating-system account or Git author, or save personal session identity in committed files. Read-only orientation may proceed while awaiting the answer; wait to choose person-specific implementation work.
+- Before implementing a task, inspect the current code, contracts, migrations and relevant verification notes. State the assigned task ID, next deliverable and whether it can start now, start with fixtures, or is waiting for a named dependency. Identify the missing output/owner and offer independent work when live integration must wait. The work split's dated snapshot is not proof of current readiness.
+- Default to the member's assignments while honoring explicit requests for other authorized work. Coordinate shared contract/migration changes with their owners; follow the specification's contract approval rules. Never present a fixture, TODO, worker heartbeat or unvalidated index as completed live processing/retrieval.
+- Update the work split when agreed ownership or dependency expectations change, and regenerate its team PDF. Keep the source specification unchanged.
+
 ## Read before implementation
 
 1. [Cahier des charges](docs/RecallCam_Cahier_des_Charges.md): authoritative requirements, module specifications, scope, data contracts, evaluation, and acceptance criteria.
